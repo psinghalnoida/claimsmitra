@@ -1,0 +1,12 @@
+Policy Wallet Mobile APP Api
+1.[X] Login using mobile no.  
+2.[X] Check mobile no already exist or not.
+3.[X] If Mobile no already exist so redirect to Passcode page. 
+4.[X] User can enter password and redirect to home page. 
+5.[X] If user forgot passcode then user can reset passcode.(Verify mobile no using OTP. if mobile verified then user can change passcode)
+6.[X] If mobile no does not exist so user will redirect to OTP screen and verified mobile no. 
+7.[X] After verification fill the form for registration. 
+8.[X] 
+9.[X]
+10.[X]
+

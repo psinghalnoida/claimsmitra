@@ -1,0 +1,2 @@
+// Controller with method list
+1. Home Controller: index, userRegistration, userLogin, userProfile, userLogout, 

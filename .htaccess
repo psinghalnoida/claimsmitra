@@ -1,0 +1,53 @@
+DirectoryIndex index.php
+RewriteEngine on
+ 
+RewriteCond $1 !^(index\.php|(.*)\.swf|frontassets|forums|images|css|downloads|jquery|js|robots\.txt|favicon\.ico)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ ./index.php?$1 [L,QSA]
+
+
+RewriteCond %{HTTP:Authorization} ^(.+)$
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+<IfModule mod_php5.c>
+############################################
+## adjust memory limit
+
+############################################
+## disable automatic session start
+## before autoload was initialized
+
+    
+
+############################################
+## enable resulting html compression
+
+   
+
+###########################################
+## disable user agent verification to not break multiple image upload
+
+    
+</IfModule>
+<IfModule mod_php7.c>
+############################################
+## adjust memory limit
+
+    
+############################################
+## disable automatic session start
+## before autoload was initialized
+
+    
+
+############################################
+## enable resulting html compression
+
+   
+
+###########################################
+## disable user agent verification to not break multiple image upload
+
+</IfModule>
+

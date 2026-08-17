@@ -1,0 +1,563 @@
+.card-img-container {
+    height: 100px;
+    /* width: max-content; */
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.fancybox-navigation {
+    width: 60px;
+    /* Adjust the width of the arrows */
+    height: 120px;
+    /* Adjust the height of the arrows */
+}
+
+.fancybox-arrow {
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 0, 0, 0.5);
+    /* Adjust the background color */
+}
+
+.fancybox-arrow:hover {
+    background-color: rgba(255, 255, 0, 0.5);
+    /* Adjust the background color on hover */
+}
+
+.fancybox-arrow:before {
+    content: '';
+    display: block;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px;
+    /* Adjust the size of the arrow */
+    height: 20px;
+    /* Adjust the size of the arrow */
+    border: solid white;
+    /* Adjust the arrow color */
+    border-width: 0 2px 2px 0;
+}
+
+.fancybox-nav {
+    width: 60px;
+    /* Adjust the width of the arrows */
+    height: 120px;
+    /* Adjust the height of the arrows */
+}
+
+.fancybox-prev {
+    left: 0;
+}
+
+.fancybox-next {
+    right: 0;
+}
+
+.case_btn {
+    width: 144px;
+    border-radius: 5px;
+    background-color: #2BB3C0;
+    color: #fff;
+    margin: 5px;
+    font-size: 17px;
+}
+
+
+.Essential_heading {
+    font-size: 18px;
+    color: black;
+    font-weight: 600;
+    border-bottom: 1px solid #e3e3e3;
+    margin: 0px 20px;
+    font-size: 22px;
+}
+.case_form_heading{
+    font-size: 18px;
+    color: black;
+    font-weight: 600;
+    border-bottom: 1px solid #e3e3e3;
+/*    margin: 0px 20px;*/
+    font-size: 22px;
+}
+
+
+/* Remove blue outline */
+.accordion-button:focus {
+    outline: none;
+    box-shadow: none;
+    color: black !important;
+}
+
+/* Remove background color */
+.accordion-button {
+    background-color: transparent !important;
+    color: black !important;
+}
+
+.accordion-button:hover {
+    color: black !important;
+}
+
+/* Custom CSS to change the color of the accordion button icon */
+.accordion-button.collapsed::after {
+    color: red !important;
+    /* Change this to the desired color */
+}
+
+.border-bottom {
+    border-bottom: 1px solid #ebebea;
+}
+
+.fa-exclamation-triangle {
+    display: none;
+}
+#additional_field,#additional_fields_2,#additional_fields_3,#additional_fields_4{
+    display:none;
+}
+
+.form-check-label {
+    margin-top: 5px;
+}
+
+.card-img-container {
+    position: relative;
+    display: inline-block;
+}
+
+.card-img-container img {
+    display: block;
+    /* Remove extra space below the image */
+}
+
+.delete-icon {
+    position: absolute;
+    top: 0;
+    /* bottom: 6%; */
+    /* right: -36%; */
+    background: rgba(244, 247, 251, 0.83);
+    border-radius: 50%;
+    padding: 4px 8px;
+    cursor: pointer;
+    display: block;
+    z-index: 10;
+    font-size: 16px;
+    color: red;
+}
+
+.image-checkbox-container {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+}
+
+
+.form-check-input {
+    margin-right: 5px;
+    /* Space between checkbox and label */
+    margin-top: 15px;
+}
+
+.delete-btn {
+    padding: 3px 7px;
+}
+
+
+#lightgallery {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px; /* Adjust the spacing between items */
+}
+
+#lightgallery li {
+    list-style: none;
+    /* display: flex; */
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.img-responsive {
+    max-width: 100%;
+    height: auto;
+}
+
+
+
+/* Documents */
+.demo-gallery-poster {
+    display: none; /* Hide the zoom icon by default */
+}
+
+/* Show zoom icon on hover */
+.pdf-thumbnail:hover .demo-gallery-poster {
+    display: block;
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    background: rgba(255, 255, 255, 0.7);
+    padding: 2px;
+    border-radius: 50%;
+}
+.demo-gallery > ul > li{
+    width: 100px;
+}
+.demo-gallery > ul > li a > img {
+    height: 100px;
+    width: 100px;
+}
+
+.pdf-thumb {
+    width: 100%;
+    height: auto;
+}
+
+.gallery-item {
+    position: relative;
+    display: inline-block;
+    margin: 5px;
+}
+
+.pdf-thumbnail {
+    width: 80px; /* Width for PDF thumbnails */
+    height: 100px; /* Height for PDF thumbnails */
+    overflow: hidden;
+}
+
+.pdf-thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.image-checkbox-container {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 10;
+}
+
+.collapse-icon {
+    font-size: 20px;
+  
+}
+
+
+/* ------------------------------------------------------------------------- *  
+* Media file Style (NANDINI)
+* ------------------------------------------------------------------------- */
+.dismiss {
+    position: absolute;
+    top:0;
+    left:-50px;
+    width: 50px; 
+    height: 63px; 
+    background: transparent; 
+    color:#ffffff;
+    background-color: #e16123;
+    transition: opacity .15s linear;
+}
+
+.miniStats--panel p img{
+    margin-bottom:28px; 
+}
+
+.modal.right .modal-dialog{
+    position: fixed;
+    right: 0;
+    top: 0;
+    /* left: 34%; */
+    height: 100%;
+    margin: 0;
+    /* transform: translateX(100%); */
+    transition: transform 0.3s ease-in-out;
+} 
+
+.miniStats--label {
+    display: inline-block;
+    margin-left: auto;
+    padding: 13px 14px;
+    border-radius: 50%;
+    height: 50px;
+    width: 50px;
+}
+
+/* ------------------------------------------------------------------------- *  
+* Media file Style (KAJAL)
+* ------------------------------------------------------------------------- */
+
+#accordion01 {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 25px;
+}
+
+
+.weather--panel {
+    /* flex: 1 1 calc(10% - 15px); Adjust width to 10% minus margin */
+    /* box-sizing: border-box;
+    position: relative; 
+    padding-top: 25%; 
+    min-height: 50px; 
+    width: 208px; 
+    height: 100px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    color: #fff;
+    overflow: hidden; 
+    cursor: pointer; */
+
+    max-height:122px;
+}
+
+.weather--title {
+    font-size: 30px; 
+    font-weight: bold; 
+}
+
+/* Icon and text styling */
+.weather--info {
+    /* align-items: center;
+    justify-content: center; */
+    gap: 10px;
+    margin-top: 0px;
+}
+
+.weather--info span {
+    font-size: 20px;
+}
+
+.counter {
+    font-size: 20px; 
+}
+
+.weather--info i{
+    opacity: 0.15;
+}
+
+
+
+
+.dropdown-container {
+    position: relative;
+}
+
+#vendor-dropdown {
+    display: none; /* Hide by default */
+    position: absolute; /* Position it relative to the nearest positioned ancestor */
+    width: 100%; /* Full width of its container */
+    max-height: 200px; /* Maximum height of the dropdown */
+    overflow-y: auto; /* Add scroll if content exceeds max-height */
+    background-color: white; /* Background color */
+    border: 1px solid #ccc; /* Border */
+    border-radius: 4px; /* Rounded corners */
+    z-index: 1050; /* Ensure it appears above other elements (higher than the modal) */
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1); /* Optional: add shadow for better visibility */
+}
+
+
+.vendors-dropdown-item {
+    padding: 10px;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+}
+
+.vendors-dropdown-item:hover {
+    background-color: #f0f0f0;
+}
+
+#vendor-dropdown.active {
+    display: block;
+}
+
+
+
+
+.error-message {
+    color: red;
+    display: none;
+}
+
+.error {
+    color: red;
+    display: block;
+}
+
+.scroll-container {
+    max-height: 140px;
+    overflow-y: auto;
+    border-radius: 4px;
+    background-color: #fff;
+    position: absolute;
+    width: 100%;
+    z-index: 1000;
+    box-sizing: border-box;
+}
+
+.dropdown-menu {
+    max-height: 203px;
+    overflow-y: auto;
+    border-radius: 4px;
+    background-color: #fff;
+    position: absolute;
+    width: 100%;
+    z-index: 1000;
+    box-sizing: border-box;
+}
+
+.scroll-container ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.scroll-container li.userOptions {
+    padding-left: 3px;
+    border-bottom: 1px solid #cfcece;
+    cursor: pointer;
+    background-color: #f5f5f5;
+}
+
+.scroll-container li.userOptions:hover {
+    background-color: #eee;
+}
+
+.dropdown-list.vendor-options:hover {
+    background-color: #eee;
+}
+
+.vendor-options {
+    font-size: 14px;
+    line-height: 17px;
+    color: #5e5a5a;
+    padding-left: 3px;
+    cursor: pointer;
+    list-style-type: none;
+}
+
+
+
+#vendor-dropdown {
+    display: none;
+    position: absolute;
+    width: 100%;
+   
+    overflow-y: auto;
+    padding: 0px;
+    max-height: 203px;
+}
+
+#vendor-dropdown.active {
+    display: block;
+}
+
+.dropdown-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+
+
+.vendor-options:hover {
+    background-color: #f1f1f1;
+}
+
+/* Container for the dropdown */
+#branch-dropdown {
+    /* display: none; */
+    /* Hidden by default */
+    position: absolute;
+    width: 92%;
+    max-height: 203px;
+    overflow-y: auto;
+    border: 1px solid rgb(204, 204, 204);
+    border-radius: 4px;
+        z-index: 1000;
+}
+
+/* List inside the dropdown */
+.dropdown-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.branch-dropdown-item {
+    padding-left: 3px;
+    cursor: pointer;
+   
+    font-size: 14px;
+}
+
+.branch-dropdown-item:hover {
+    background-color: #f5f5f5;
+}
+
+.branch-dropdown-item:focus {
+    outline: none;
+    background-color: #e0e0e0;
+}
+
+.dropdown-container {
+    position: relative;
+}
+
+#user-dropdown {
+    display: none;
+    position: absolute;
+    width: 92%;
+    max-height: 203px;
+    overflow-y: auto;
+    background-color: #fff;
+    border-radius: 4px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    border: 1px solid rgb(204, 204, 204);
+    border-radius: 4px;
+}
+
+
+
+
+#user-dropdown.active {
+    display: block;
+}
+
+.dropdown-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.dropdown-list li {
+    padding: 5px;
+    cursor: pointer;
+}
+
+.dropdown-list li:hover {
+    background-color: #f0f0f0;
+}
+
+.user-dropdown-item {
+    font-size: 14px;
+}
+
+
+
+
+
+
+
+
+

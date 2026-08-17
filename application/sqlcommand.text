@@ -1,0 +1,8 @@
+ALTER TABLE claims_billing
+MODIFY COLUMN sub_total DECIMAL(10, 2),
+MODIFY COLUMN total DECIMAL(10, 2),
+MODIFY COLUMN grandtotal DECIMAL(10, 2);
+
+
+
+
