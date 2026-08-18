@@ -21,14 +21,29 @@ Code source of truth for stage numbers and seats: `application/config/workflow.p
 
 ---
 
+## Assignment class: REG or STY
+
+Every case is marked **REG** (regular) or **STY** (stereotype) when it is entered. Both classes **require media** (photos and videos) on the file before the report can be received. They differ only on ILA and LOR.
+
+| Class | Media | ILA (Immediate Loss Advice) | LOR | Then |
+|---|---|---|---|---|
+| **REG** | Required | Required | Required | Report |
+| **STY** | Required | Not on the path | Not on the path | Straight to reporting |
+
+Report is the **meeting point**. It may be prepared online (template) or offline; the system must still receive the report **together with** photos and videos. Media may arrive by upload, WhatsApp, live survey, or the Claims Mitra inspection app (any mix).
+
+**Rule:** R-29.
+
+---
+
 ## Happy path
 
 ```
 W-01 Appoint  →  W-02 Land on desk  →  W-03 Handler owns file
-      →  W-04 Field work (Under Survey)
-      →  W-05 ILA + photos/video
-      →  W-06 LOR (if needed)
-      →  W-07 FSR / report
+      →  W-04 Field + media (both REG and STY)
+      →  REG only: W-05 ILA then W-06 LOR
+      →  STY: skip W-05 and W-06
+      →  W-07 Report (meeting point) — online or offline, with media already/also on the file
       →  W-08 Bill (pay office)
       →  W-09 Tax invoice (TI)
       →  W-10 Dispatch report
@@ -72,33 +87,36 @@ Cancel may happen from W-03 onward → status **Cancelled (11)**. Appointment tr
 
 ---
 
-### W-04 — Field work (status **1 Under Survey**)
+### W-04 — Field work and media (status **1 Under Survey**)
 
 **Who:** Handler + inspectors.  
-**What:** Visit, collect photos/video/data. Licensed survey still needs a covering SLA to sign later (R-12).  
-**Code status:** `1`.
+**What:** Collect photos/video/data. **Required for both REG and STY.** Sources may mix: web/app upload, WhatsApp, live survey, Claims Mitra inspection app. Licensed survey still needs a covering SLA to sign later (R-12).  
+**Code status:** `1`.  
+**Rules:** R-29.
 
 ---
 
-### W-05 — ILA + media (status **2**)
+### W-05 — ILA (status **2**) — **REG only**
 
-Interim loss advice and evidence on the file. Handler assimilates.  
-**Code status:** `2`.
-
----
-
-### W-06 — LOR (status **3**)
-
-Letter of requirement when documents are still needed. Optional by product.  
-**Code status:** `3`.
+Immediate Loss Advice. **Mandatory on REG.** **Not on the STY path** (STY does not skip media; it skips this document).  
+**Code status:** `2`.  
+**Rules:** R-29.
 
 ---
 
-### W-07 — FSR / report (status **4**)
+### W-06 — LOR (status **3**) — **REG only**
 
-Final survey/investigation report in the template. Handler owns writing; named SLA signs if required.  
+Letter of requirement. **Mandatory on REG** after ILA. **Not on the STY path.**  
+**Code status:** `3`.  
+**Rules:** R-29.
+
+---
+
+### W-07 — Report (status **4**) — meeting point
+
+Both REG and STY arrive here. Report may be prepared **online** (template) or **offline**; either way the system must receive it **along with** photos and videos. Handler owns writing; named SLA signs if required.  
 **Code status:** `4`.  
-**Rules:** R-12, R-16.
+**Rules:** R-12, R-16, R-29.
 
 ---
 
@@ -158,10 +176,12 @@ Until a distinct “supervisor” usertype exists, **usertype 2** is the supervi
 
 ## What this workflow does not do yet
 
+- Persist **REG/STY** on the job and skip ILA/LOR in code for STY (R-29 is spec; status chain is still linear).
 - Distinct supervisor usertype vs admin (R-15 full tree).
 - Survey branch (GST) in the session switcher (still company + department).
 - Native foreign-currency invoices (R-26); USD/NPR remain a later change.
 - Formal appointment-transfer log (R-07 history).
+- Auto-file WhatsApp / live / inspection-app media onto `aid` as first-class sources.
 
 ---
 
@@ -170,3 +190,4 @@ Until a distinct “supervisor” usertype exists, **usertype 2** is the supervi
 | Date | Decision | Effect |
 |---|---|---|
 | 2026-08-18 | Adopt W-01–W-12 and seat visibility above. Incoming lists follow handler vs admin vs accounts. | `workflow.php` + incoming/dashboard filters. Vendor code persisted on bill save (R-23). |
+| 2026-08-18 | REG vs STY. Both require media. REG requires ILA then LOR. STY skips those two and goes to report. Report is the meeting point. | R-29. W-04–W-07 amended. |

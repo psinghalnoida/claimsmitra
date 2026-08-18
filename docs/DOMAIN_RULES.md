@@ -195,6 +195,17 @@ Minimum snapshot:
 
 **Why:** “Cattle spot” is a product; Miscellaneous/Crop is the licence/desk. One string cannot drive templates, SLA, and supervisor books.
 
+### R-29 — REG and STY; both require media
+
+Every assignment is **REG** (regular) or **STY** (stereotype).
+
+- **Both** require photos and videos on the file (upload, WhatsApp, live survey, and/or inspection app).
+- **REG** must go through **ILA** then **LOR** before the report.
+- **STY** does **not** require ILA or LOR; it goes to reporting after media.
+- The **report** is the meeting point (online template or offline file). The system must receive the report **along with** the media.
+
+**Why:** Stereotype jobs must not be forced through ILA/LOR, but they are not paper-only. Without media the report has no evidence. Regular jobs need ILA/LOR for insurer TAT and document chase.
+
 ---
 
 ## F. Billing and money
@@ -256,3 +267,4 @@ Existing tables (`claims_company` + profession flags, departments as a mixed LOB
 |---|---|---|
 | 2026-08-18 | Initial rules captured from product-owner working model (vendor CINs, assignment, survey org, billing). | R-01–R-28 adopted. |
 | 2026-08-18 | Job workflow W-01–W-12 adopted; incoming lists follow seats (R-17). | See `docs/WORKFLOW.md`. Vendor code persisted on bill save (R-23). |
+| 2026-08-18 | REG vs STY. Media required on both. ILA/LOR only on REG. Report is the join. | R-29. |
