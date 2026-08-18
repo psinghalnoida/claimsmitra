@@ -206,6 +206,19 @@ Every assignment is **REG** (regular) or **STY** (stereotype).
 
 **Why:** Stereotype jobs must not be forced through ILA/LOR, but they are not paper-only. Without media the report has no evidence. Regular jobs need ILA/LOR for insurer TAT and document chase.
 
+### R-33 — LOR chase is review-then-send
+
+On **REG**, LOR is a living document checklist, not a one-shot letter.
+
+- Paste the **appointment mail** (subject + people). The system **parses and stores** addresses and the original subject.
+- Each stored person is marked **To / Cc / Bcc** (or skip this send).
+- Each required document is **received** or **pending**. The letter and mailer include **pending items only**.
+- Outbound subject is the **appointment subject + our ref** (`case_reference`, else `aid`).
+- Choose a **reminder frequency** (days). When due, the job appears on the **dashboard**. The handler reviews inbound mail, ticks received docs, then sends LOR for what is still pending.
+- The system **does not silently auto-email**. Frequency is a dashboard nag, not an unattended mailbox.
+
+**Why:** Auto-chasing without checking receipts nags for papers already in. Insurer desks find the file by the appointment thread subject, not a new Claims Mitra title.
+
 ---
 
 ## F. Billing and money
@@ -298,3 +311,4 @@ Existing tables (`claims_company` + profession flags, departments as a mixed LOB
 | 2026-08-18 | Job workflow W-01–W-12 adopted; incoming lists follow seats (R-17). | See `docs/WORKFLOW.md`. Vendor code persisted on bill save (R-23). |
 | 2026-08-18 | REG vs STY. Media required on both. ILA/LOR only on REG. Report is the join. | R-29. |
 | 2026-08-18 | Dispatch modes + destination; await payment advice then chase or archive; retain file/media ≥ 3 years. | R-30–R-32. |
+| 2026-08-18 | LOR chase: paste appointment mail, To/Cc/Bcc, mark received, dashboard frequency reminders, subject = appointment + our ref. No silent auto-mail. | R-33. |

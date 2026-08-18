@@ -151,6 +151,8 @@ class Assignment extends CI_Controller
                             'defaultdepartment' => $defaultdepartment,
                             'usertype' => $usertype,
                             'view' => "Incoming case",
+                            'lor_due' => $this->assignment->getLorDueJobs($defaultcompany, $defaultdepartment, $usertype, $this->session->userdata('id')),
+                            'data_param' => $encrypted_json,
                         ];
                         $this->load->view("adminpanel/jobs/locationbasedjob/incomingcase", $data);
                     }
@@ -2459,32 +2461,24 @@ class Assignment extends CI_Controller
                     $aid = $this->encryption->decrypt(base64_decode($this->input->get('q')));
 
                     // Get the LOR status
+                    lor_ensure_schema();
                     $lorStatus = $this->assignment->getSendlorStatus($aid);
-
-                    if ($lorStatus == 1) {
-                        // If status is 1, proceed to load the "View LOR" view
-                        $data = [
-                            'defaultcompany' => $defaultcompany,
-                            'defaultdepartment' => $defaultdepartment,
-                            'usertype' => $usertype,
-                            'lorStatus' => $lorStatus,
-                            'aid' => $aid,
-                            'view' => "View LOR",
-                        ];
-
-                        $this->load->view('adminpanel/accounts/viewlor', $data);
-                    } else {
-                        // If status is not 1, load the "Prepare LOR" view
-                        $data = [
-                            'defaultcompany' => $defaultcompany,
-                            'defaultdepartment' => $defaultdepartment,
-                            'usertype' => $usertype,
-                            'lorStatus' => $lorStatus,
-                            'aid' => $aid,
-                            'view' => "Prepare LOR",
-                        ];
-                        $this->load->view('adminpanel/accounts/viewlor', $data);
-                    }
+                    $job = $this->assignment->getCaseReferenceByAid($aid);
+                    $ourRef = !empty($job['case_reference']) ? $job['case_reference'] : $aid;
+                    $lorRow = $this->assignment->getSendlorRow($aid);
+                    $data = [
+                        'defaultcompany' => $defaultcompany,
+                        'defaultdepartment' => $defaultdepartment,
+                        'usertype' => $usertype,
+                        'lorStatus' => $lorStatus,
+                        'aid' => $aid,
+                        'view' => ($lorStatus == 1) ? 'View LOR' : 'Prepare LOR',
+                        'ourRef' => $ourRef,
+                        'lorRow' => $lorRow,
+                        'lorParties' => $this->assignment->getLorParties($aid),
+                        'lorReminderDays' => $this->config->item('workflow_lor_reminder_days'),
+                    ];
+                    $this->load->view('adminpanel/accounts/viewlor', $data);
                 }
             }
         } else {
@@ -2631,42 +2625,149 @@ class Assignment extends CI_Controller
         }
     }
 
+    public function parse_appointment_mail()
+    {
+        if ($this->session->userdata('id') == null) {
+            echo json_encode(['status' => 'error', 'message' => 'Not logged in']);
+            return;
+        }
+        $aid = $this->input->post('aid');
+        $raw = $this->input->post('raw');
+        if (!$aid || trim((string) $raw) === '') {
+            echo json_encode(['status' => 'error', 'message' => 'Paste the appointment mail first']);
+            return;
+        }
+        lor_ensure_schema();
+        $parsed = lor_parse_appointment_mail($raw);
+        $job = $this->assignment->getCaseReferenceByAid($aid);
+        $ourRef = !empty($job['case_reference']) ? $job['case_reference'] : $aid;
+        $this->assignment->upsertLorParties($aid, $parsed['parties'], false);
+        $this->assignment->saveLorChaseMeta($aid, [
+            'appointment_subject' => $parsed['subject'],
+            'our_ref' => $ourRef,
+            'mail_subject' => lor_compose_subject($parsed['subject'], $ourRef),
+        ]);
+        echo json_encode([
+            'status' => 'success',
+            'subject' => $parsed['subject'],
+            'mail_subject' => lor_compose_subject($parsed['subject'], $ourRef),
+            'our_ref' => $ourRef,
+            'parties' => $this->assignment->getLorParties($aid),
+        ]);
+    }
+
+    public function save_lor_parties()
+    {
+        if ($this->session->userdata('id') == null) {
+            echo json_encode(['status' => 'error', 'message' => 'Not logged in']);
+            return;
+        }
+        $aid = $this->input->post('aid');
+        $parties = json_decode($this->input->post('parties'), true);
+        if (!$aid || !is_array($parties)) {
+            echo json_encode(['status' => 'error', 'message' => 'Invalid people list']);
+            return;
+        }
+        lor_ensure_schema();
+        $this->assignment->upsertLorParties($aid, $parties);
+        echo json_encode(['status' => 'success', 'parties' => $this->assignment->getLorParties($aid)]);
+    }
+
+    public function mark_lor_received()
+    {
+        if ($this->session->userdata('id') == null) {
+            echo json_encode(['status' => 'error', 'message' => 'Not logged in']);
+            return;
+        }
+        $aid = $this->input->post('aid');
+        $questionId = $this->input->post('question_id');
+        $received = (int) $this->input->post('received');
+        if (!$aid || $questionId === null || $questionId === '') {
+            echo json_encode(['status' => 'error', 'message' => 'Invalid document']);
+            return;
+        }
+        $ok = $this->assignment->markLorReceived($aid, $questionId, $received);
+        $row = $this->assignment->getSendlorRow($aid);
+        echo json_encode([
+            'status' => $ok ? 'success' : 'error',
+            'pending' => $row ? lor_pending_descriptions($row['lor']) : [],
+        ]);
+    }
+
+    public function save_lor_reminder()
+    {
+        if ($this->session->userdata('id') == null) {
+            echo json_encode(['status' => 'error', 'message' => 'Not logged in']);
+            return;
+        }
+        lor_ensure_schema();
+        $aid = $this->input->post('aid');
+        $days = (int) $this->input->post('frequency_days');
+        if (!$aid || $days < 1) {
+            echo json_encode(['status' => 'error', 'message' => 'Choose a frequency']);
+            return;
+        }
+        $next = lor_next_due_date($days);
+        $this->assignment->saveLorChaseMeta($aid, [
+            'reminder_frequency_days' => $days,
+            'next_due_on' => $next,
+        ]);
+        echo json_encode(['status' => 'success', 'next_due_on' => $next, 'frequency_days' => $days]);
+    }
+
     public function submit_viewlor()
     {
         if ($this->session->userdata('id') != null) {
+            lor_ensure_schema();
             $aid = $this->input->post('aid');
             $sent_to = json_decode($this->input->post('sent_to'), true);
             $special_note = $this->input->post('special_note');
             $subject = $this->input->post('subject');
             $date_of_letter = $this->input->post('date_of_letter');
-            $automail_fix = json_decode($this->input->post('automail_fix'), true);
-            $sent_date = $this->input->post('sent_date');
-            $mail_automation = $this->input->post('mail_automation');
-            $questions = json_decode($this->input->post('questions'), true);
+            $frequencyDays = (int) $this->input->post('frequency_days');
+            $appointmentSubject = $this->input->post('appointment_subject');
             $email_body = $this->input->post('email_body');
 
+            $row = $this->assignment->getSendlorRow($aid);
+            $pending = $row ? lor_pending_descriptions($row['lor']) : [];
+            if (empty($pending)) {
+                echo json_encode(['status' => 'error', 'message' => 'No pending documents to send. Mark received items first, or add lines from the LOR Bank.']);
+                return;
+            }
+
             if ($aid && is_array($sent_to) && !empty($sent_to)) {
-                $data = [
+                $job = $this->assignment->getCaseReferenceByAid($aid);
+                $ourRef = !empty($job['case_reference']) ? $job['case_reference'] : $aid;
+                if ($appointmentSubject === null || $appointmentSubject === '') {
+                    $appointmentSubject = $row['appointment_subject'] ?? '';
+                }
+                $composedSubject = lor_compose_subject($subject ?: $appointmentSubject, $ourRef);
+                if ($frequencyDays < 1) {
+                    $frequencyDays = (int) ($row['reminder_frequency_days'] ?? 7);
+                }
+                if ($frequencyDays < 1) {
+                    $frequencyDays = 7;
+                }
+                $nextDue = lor_next_due_date($frequencyDays);
+                $updated = $this->assignment->saveLorChaseMeta($aid, [
                     'sent_to' => json_encode($sent_to),
                     'special_note' => $special_note,
-                    'mail_subject' => $subject,
+                    'mail_subject' => $composedSubject,
+                    'appointment_subject' => $appointmentSubject,
+                    'our_ref' => $ourRef,
                     'date_of_letter' => $date_of_letter,
-                    'automail_fix' => json_encode($automail_fix),
-                    'sent_date' => $sent_date,
-                    'mail_automation' => $mail_automation,
+                    'sent_date' => date('Y-m-d'),
                     'status' => 1,
-                ];
-
-                // Update LOR data
-                $updated = $this->assignment->updateLorQuestions($aid, $data);
+                    'reminder_frequency_days' => $frequencyDays,
+                    'next_due_on' => $nextDue,
+                ]);
 
                 if ($updated) {
-                    $attachmentPath = $this->generate_new_pdf($questions, $special_note, $aid);
-
-                    // If the PDF was successfully generated, send the email
+                    $attachmentPath = $this->generate_new_pdf($pending, $special_note, $aid);
                     if ($attachmentPath && file_exists($attachmentPath)) {
-                        $this->sendmail($sent_to, $attachmentPath, $email_body, $subject); // Send questions as the body
-                        echo json_encode(['status' => 'success']);
+                        $this->sendmail($sent_to, $attachmentPath, $email_body, $composedSubject);
+                        $this->assignment->markJobLorSent($aid);
+                        echo json_encode(['status' => 'success', 'subject' => $composedSubject, 'next_due_on' => $nextDue]);
                     } else {
                         echo json_encode(['status' => 'error', 'message' => 'Failed to generate PDF']);
                     }
@@ -2675,7 +2776,7 @@ class Assignment extends CI_Controller
                 }
             } else {
                 log_message('error', 'Invalid sent_to data: ' . json_encode($sent_to));
-                echo json_encode(['status' => 'error', 'message' => 'Invalid input data']);
+                echo json_encode(['status' => 'error', 'message' => 'Select at least one To / Cc / Bcc']);
             }
         } else {
             redirect('user_logout');
@@ -2779,30 +2880,49 @@ class Assignment extends CI_Controller
             $this->email->initialize($email_config);
             $sender_name = "VP Singhal & Co.";
             $formattedEmailBody = nl2br($emailBody);
+
+            $to = [];
+            $cc = [];
+            $bcc = [];
             foreach ($recipients as $recipient) {
-                $to = $recipient['to'] ?? null;
-                $cc = $recipient['cc'] ?? null;
-
-                if ($to) {
-                    $this->email->from($config['username'], $sender_name);
-                    $this->email->to($to);
-
-                    if ($cc) {
-                        $this->email->cc($cc);
-                    }
-
-                    $this->email->subject($subject);
-                    $this->email->message($formattedEmailBody);
-
-                    // Attach the PDF if it exists
-                    if ($attachmentPath && file_exists($attachmentPath)) {
-                        $this->email->attach($attachmentPath);
-                    }
-
-                    if (!$this->email->send()) {
-                        echo $this->email->print_debugger();
-                    }
+                if (!empty($recipient['to'])) {
+                    $to[] = $recipient['to'];
                 }
+                if (!empty($recipient['cc'])) {
+                    $cc[] = $recipient['cc'];
+                }
+                if (!empty($recipient['bcc'])) {
+                    $bcc[] = $recipient['bcc'];
+                }
+            }
+            $to = array_values(array_unique($to));
+            $cc = array_values(array_unique($cc));
+            $bcc = array_values(array_unique($bcc));
+            if (empty($to) && !empty($cc)) {
+                $to = $cc;
+                $cc = [];
+            }
+            if (empty($to)) {
+                log_message('error', 'LOR sendmail: no To address');
+                return;
+            }
+
+            $this->email->clear(true);
+            $this->email->from($config['username'], $sender_name);
+            $this->email->to($to);
+            if (!empty($cc)) {
+                $this->email->cc($cc);
+            }
+            if (!empty($bcc)) {
+                $this->email->bcc($bcc);
+            }
+            $this->email->subject($subject);
+            $this->email->message($formattedEmailBody);
+            if ($attachmentPath && file_exists($attachmentPath)) {
+                $this->email->attach($attachmentPath);
+            }
+            if (!$this->email->send()) {
+                log_message('error', 'LOR sendmail failed: ' . $this->email->print_debugger(['headers']));
             }
         } else {
             log_message('error', 'Email configuration or recipient data is missing.');

@@ -105,12 +105,12 @@ Immediate Loss Advice. **Mandatory on REG.** **Not on the STY path** (STY does n
 
 ### W-06 — LOR (status **3**) — **REG only**
 
-Letter of Requirement: a checklist of documents asked from the insured / insurer, issued as a PDF letter and emailed. **Mandatory on REG after ILA. Not on the STY path.**
+Letter of Requirement: a living checklist of documents asked from the insured / insurer. **Mandatory on REG after ILA. Not on the STY path.**
 
-**Job status (spec):** `claims_livelocationjob.status = 3` (LOR Sent).  
-**Letter row (as built):** `claims_sendlor.status` **0 = draft**, **1 = sent**. These are **different** statuses.
-
-**Rules:** R-29.
+**Job status:** `claims_livelocationjob.status = 3` after the first send (do not move the job backwards if it is already at report or later).  
+**Letter row:** `claims_sendlor` — draft until sent; `next_due_on` drives the dashboard nag.  
+**People:** `claims_lor_party` per `aid`.  
+**Rules:** R-29, **R-33**.
 
 #### Where LOR sits on the job
 
@@ -119,7 +119,7 @@ flowchart TD
   W04[W-04 Field + media]
   class{REG or STY?}
   ILA[W-05 ILA]
-  LOR[W-06 LOR]
+  LOR[W-06 LOR chase]
   RPT[W-07 Report — meeting point]
 
   W04 --> class
@@ -129,48 +129,46 @@ flowchart TD
   class -->|STY: skip ILA and LOR| RPT
 ```
 
-#### Letter workflow as built (`Assignment`: `/preparelor` → `/viewlor`)
+#### LOR chase (review, then send)
 
-One `claims_sendlor` row per assignment `aid`. Bank lines live in `claims_lor` (tabs by name: Motor, Marine, Fire, MBD, Project, Fraud/Fidelity, Burglary, ATM — not firm LOB ids).
+Frequency reminds the **desk**, not the mailbox. Each cycle: open the file, tick documents that arrived, send LOR for what is still pending.
 
 ```mermaid
 flowchart TD
-  open[Case workspace: Prepare LOR]
-  sentQ{claims_sendlor.status = 1?}
-  bank[LOR Bank: pick lines by tab]
-  merge[Save / merge JSON lines onto sendlor — still draft]
-  compose[View LOR: edit / add custom / delete lines]
-  recip[Send To: To / Cc / Role / Email — free text]
-  meta[Letter date, subject, special note]
-  auto[Optional: mail automation + reminder date chips]
-  preview[Preview PDF]
-  send[Send]
-  pdf[Dompdf → uploads/aid/lor/lor_YYYYMMDD_His.pdf]
-  smtp[Email via company SMTP]
-  row[sendlor.status = 1]
-  job[Job status 3 — not set by this send]
-  remind[Reminder dates stored — no cron re-send yet]
+  paste[Paste appointment mail: subject + people]
+  parse[Parse and store parties + original subject]
+  bank[LOR Bank / custom lines]
+  freq[Choose reminder frequency]
+  dash[Dashboard: LOR due when next_due_on is today or past]
+  review[Open file: review inbound mail]
+  mark[Mark received docs]
+  pending{Any pending docs?}
+  stop[Stop nag — ready for report]
+  tocc[Set To / Cc / Bcc from stored people]
+  subj[Subject = appointment subject + our ref]
+  send[Send PDF of pending lines only]
+  bump[Set next_due = today + frequency]
+  job3[First send: job status 3]
 
-  open --> sentQ
-  sentQ -->|yes| compose
-  sentQ -->|no / draft| bank
-  bank --> merge
-  merge --> compose
-  compose --> recip
-  recip --> meta
-  meta --> auto
-  auto --> preview
-  preview --> send
-  send --> pdf
-  pdf --> smtp
-  smtp --> row
-  row -.-> job
-  row -.-> remind
+  paste --> parse
+  parse --> bank
+  bank --> freq
+  freq --> dash
+  dash --> review
+  review --> mark
+  mark --> pending
+  pending -->|no| stop
+  pending -->|yes| tocc
+  tocc --> subj
+  subj --> send
+  send --> bump
+  send --> job3
+  bump --> dash
 ```
 
-**After send:** Prepare LOR redirects to View LOR. Recipients are **not** bound to appointing / paying / concerned offices. Reminder chips (`automail_fix`) are stored; nothing currently re-sends on those dates.
+**Mailer:** one message with To / Cc / Bcc. Subject is appointment thread + our ref (`case_reference`, else `aid`). Body/PDF lists **pending** items only.
 
-**Gap vs this spec:** STY jobs can still open the LOR screens. Sending the letter does **not** move the job to status 3.
+**Dashboard:** jobs with `next_due_on <= today` and at least one pending line, for the current seat’s book.
 
 ---
 
@@ -246,7 +244,7 @@ Until a distinct “supervisor” usertype exists, **usertype 2** is the supervi
 
 ## What this workflow does not do yet
 
-- Persist **REG/STY** on the job and skip ILA/LOR in code for STY (R-29 is spec; status chain is still linear). Sending LOR does not set job status **3**; reminder dates are stored but not executed.
+- Persist **REG/STY** on the job and skip ILA/LOR in code for STY (R-29 is spec; status chain is still linear).
 - Distinct supervisor usertype vs admin (R-15 full tree).
 - Survey branch (GST) in the session switcher (still company + department).
 - Native foreign-currency invoices (R-26); USD/NPR remain a later change.
@@ -264,3 +262,4 @@ Until a distinct “supervisor” usertype exists, **usertype 2** is the supervi
 | 2026-08-18 | REG vs STY. Both require media. REG requires ILA then LOR. STY skips those two and goes to report. Report is the meeting point. | R-29. W-04–W-07 amended. |
 | 2026-08-18 | After bill: record dispatch (portal/email/post/handover, to pay or other office); await payment advice; chase balance or archive; retain ≥ 3 years. | R-30–R-32. W-10–W-12 amended. |
 | 2026-08-18 | Document LOR letter flow as built vs job stage W-06. | W-06 diagrams. |
+| 2026-08-18 | LOR chase: paste appointment mail, received/pending, frequency dashboard nag, subject + our ref. | R-33. W-06. |

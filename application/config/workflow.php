@@ -126,3 +126,6 @@ $config['workflow_dispatch_to'] = array(
     'pay_office' => 'Paying office',
     'other_office' => 'Other concerned office',
 );
+
+/** R-33 dashboard reminder frequencies (days). */
+$config['workflow_lor_reminder_days'] = array(3, 7, 14, 30);

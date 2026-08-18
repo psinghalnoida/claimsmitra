@@ -121,11 +121,46 @@
     </div>
   </div>
 
-
-
-
-
-  <div class="row" style="margin-left: 15px; margin-right:15px">
+  <div class="row" style="margin-left: 15px; margin-right:15px;">
+    <div class="col-md-12">
+      <div class="panel" style="margin-bottom:15px;">
+        <div class="panel-heading">
+          <h3 class="panel-title">LOR due — review documents, then send pending</h3>
+        </div>
+        <div class="panel-content">
+          <?php if (!empty($lor_due)) { ?>
+          <table class="table table-bordered table-hover">
+            <thead>
+              <tr>
+                <th>Due</th>
+                <th>AID / Our ref</th>
+                <th>Pending docs</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php foreach ($lor_due as $dueRow) {
+                  $q = base64_encode($this->encryption->encrypt($dueRow['aid']));
+                  $dataQs = isset($data_param) ? $data_param : $this->input->get('data');
+                  $href = base_url('viewlor?q=' . $q . '&data=' . $dataQs);
+                  $ref = $dueRow['case_reference'] ?: ($dueRow['our_ref'] ?: $dueRow['aid']);
+              ?>
+              <tr>
+                <td><?php echo htmlspecialchars($dueRow['next_due_on']); ?></td>
+                <td><?php echo htmlspecialchars($dueRow['aid']); ?><br><span style="color:#e16123;"><?php echo htmlspecialchars($ref); ?></span></td>
+                <td><?php echo (int) $dueRow['pending_count']; ?></td>
+                <td><a class="btn btn-sm btn-info" href="<?php echo $href; ?>">Review &amp; send</a></td>
+              </tr>
+              <?php } ?>
+            </tbody>
+          </table>
+          <?php } else { ?>
+            <p class="text-muted mb-0">No LOR reminders due. Set frequency on the LOR screen after you paste the appointment mail.</p>
+          <?php } ?>
+        </div>
+      </div>
+    </div>
+  </div>
     <div class="col-md-3" style="background-color:white; padding-right:0px;">
       <!-- <a href="javascript:void(0);" onclick="redirectToController('createnewcase', <?php echo $defaultcompany; ?>, <?php echo $defaultdepartment; ?>, <?php echo $usertype; ?>)"> -->
         <div class="panel" style="border-radius: 0px; margin-bottom:15px; margin-top:15px; background-color:#2bb3c0;">

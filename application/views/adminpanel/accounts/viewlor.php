@@ -92,9 +92,23 @@
         /* width:100%;
         transition: background-color 0.3s; */
     }
+    .question-box.received {
+        background: #f3f8f4;
+        opacity: 0.75;
+    }
    
    
 </style>
+<?php
+$lorRow = isset($lorRow) && is_array($lorRow) ? $lorRow : array();
+$lorParties = isset($lorParties) && is_array($lorParties) ? $lorParties : array();
+$ourRef = isset($ourRef) ? $ourRef : $aid;
+$lorReminderDays = !empty($lorReminderDays) ? $lorReminderDays : array(3, 7, 14, 30);
+$appointmentSubject = $lorRow['appointment_subject'] ?? '';
+$mailSubjectPrefill = !empty($lorRow['mail_subject']) ? $lorRow['mail_subject'] : '';
+$freqSelected = (int) ($lorRow['reminder_frequency_days'] ?? 7);
+$nextDueOn = $lorRow['next_due_on'] ?? '';
+?>
 <main class="main--container">
     <div class="tab-content" style="padding:0px;">
         <div class="tab-pane fade show active" id="tab10">
@@ -149,35 +163,40 @@
                 </div>
                 <div class="panel pb-5">
                     <div class="panel-heading">
-                        <h3 class="panel-title">Send To</h3>
-                        <button class="btn btn-rounded btn-default float-right mt-1" data-toggle="modal" data-target="#addmailmodal">Add Email</button>  
+                        <h3 class="panel-title">Appointment mail &amp; people</h3>
                     </div>
-                  
                     <div class="panel-content">
-                        <table class="table table-bordered"id="emailTable" style="display:none">
+                        <p class="text-muted" style="font-size:13px;">Paste the appointment mail (Subject, To, Cc, Bcc). We store the people so you can pick To / Cc / Bcc each send. Subject stays the appointment thread plus our ref.</p>
+                        <textarea id="appointmentPaste" class="form-control mb-2" rows="5" placeholder="Subject: ...&#10;To: name@insurer.com, Jane &lt;jane@broker.com&gt;&#10;Cc: desk@office.com"></textarea>
+                        <button type="button" class="btn btn-rounded btn-info mb-3" id="parseAppointmentBtn">Parse &amp; save people</button>
+                        <div class="d-flex mb-2">
+                            <span class="label-text col-md-4 col-form-label">Appointment subject</span>
+                            <div class="col-md-8">
+                                <input type="text" id="appointment_subject" class="form-control" value="<?php echo htmlspecialchars($appointmentSubject, ENT_QUOTES, 'UTF-8'); ?>">
+                            </div>
+                        </div>
+                        <div class="d-flex mb-2">
+                            <span class="label-text col-md-4 col-form-label">Our ref</span>
+                            <div class="col-md-8">
+                                <input type="text" id="our_ref" class="form-control" value="<?php echo htmlspecialchars($ourRef, ENT_QUOTES, 'UTF-8'); ?>" readonly>
+                            </div>
+                        </div>
+                        <table class="table table-bordered" id="emailTable">
                             <thead>
                                 <tr>
                                     <th><b>To</b></th>
                                     <th><b>Cc</b></th>
-                                    <th><b>Role</b></th>
+                                    <th><b>Bcc</b></th>
+                                    <th><b>Name / role</b></th>
                                     <th><b>Email</b></th>
                                 </tr>
                             </thead>
-                            <tbody id="emailTableBody">
-                                <!-- <tr>
-                                    <td><input type="checkbox" class="checkbox-to"></td>
-                                    <td><input type="checkbox" class="checkbox-cc"></td>
-                                    <td>Insurer</td>
-                                    <td>insurer@gmail.com</td>
-                                </tr> -->
-                            </tbody>
+                            <tbody id="emailTableBody"></tbody>
                         </table>
-                       
-                         <!-- <div id="lorSentMessage" <?php echo ($lorStatus == 1) ? '' : 'style="display:none;"'; ?>>
-                            Lor has been sent to: <span id="sentEmails"></span>
-                        </div> -->
-                                
-                        <!-- Modal for Add Email -->
+                        <button class="btn btn-rounded btn-default mt-1" data-toggle="modal" data-target="#addmailmodal">Add Email</button>
+                        <button type="button" class="btn btn-rounded btn-success mt-1" id="savePartiesBtn">Save To / Cc / Bcc</button>
+                    </div>
+                </div>
                         <div id="addmailmodal" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
                             <div class="modal-dialog modal-dialog-centered">
                                 <div class="modal-content">
@@ -212,7 +231,6 @@
                             </div>
                         </div>
                     </div>
-                </div>
             </div>
             <div class="col-md-7"> 
                 <div class="panel pb-5">
@@ -244,7 +262,7 @@
                             <div class="d-flex mb-2">
                                 <span class="label-text col-md-2 col-form-label">Subject:</span>
                                 <div class="col-md-10">
-                                    <input type="text" id="subject" name="subject" class="form-control" placeholder="Mail Subject" required>
+                                    <input type="text" id="subject" name="subject" class="form-control" placeholder="Appointment subject / Our Ref" required value="<?php echo htmlspecialchars($mailSubjectPrefill, ENT_QUOTES, 'UTF-8'); ?>">
                                 </div>
                             </div>
                             <textarea class="form-control" id="questionsTextarea" rows="15" style="white-space: wrap;" name="questions"></textarea>
@@ -275,75 +293,20 @@
                             </div>
                         </div>
 
-                        <div class="form-group mt-2 row">
-                            <span class="label-text col-md-12 col-form-label">Send Mail</span>
-                            <div class="col-md-12 form-inline">
-                                <label class="form-check mr-5">
-                                    <input type="checkbox" name="sent_today" id="sent_today" value="1" class="form-check-input">
-                                    <span class="form-check-label">Send Mail Today</span>
-                                </label>
-                                <label class="form-check mr-5">
-                                    <input type="checkbox" name="mail_automation" value="2" id="mail_automation_checkbox" class="form-check-input">
-                                    <span class="form-check-label">Mail Automation</span>
-                                </label>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="autoMailToggle" style="display:none;" disabled>
-                                    <div class="slider round" ></div>
-                                    <span style="font-size:14px;">Auto Mail Send</span>
-                                </label>
+                        <div class="form-group mt-2">
+                            <label>Remind me on dashboard every</label>
+                            <div class="d-flex">
+                                <select id="frequencyInput" name="frequency_days" class="form-control" style="max-width:160px;">
+                                    <?php foreach ($lorReminderDays as $d) { ?>
+                                        <option value="<?php echo (int) $d; ?>" <?php echo ($freqSelected === (int) $d) ? 'selected' : ''; ?>><?php echo (int) $d; ?> days</option>
+                                    <?php } ?>
+                                </select>
+                                <button type="button" class="btn btn-rounded btn-info ml-2" id="saveReminderBtn">Save reminder</button>
                             </div>
+                            <p class="text-muted mt-2" style="font-size:13px;">When due, this file shows on the dashboard. Open it, tick documents received, then send LOR for what is still pending. We do not auto-email.</p>
+                            <p id="nextDueLabel" style="font-size:13px;"><?php echo $nextDueOn ? ('Next dashboard reminder: ' . htmlspecialchars($nextDueOn, ENT_QUOTES, 'UTF-8')) : 'No reminder set yet.'; ?></p>
                         </div>
-                        <div id="mail_automation" style="display:none;">
-                            <div class="row">
-                                <div class="col-md-12">
-                                    <div class="form-group">
-                                        <label>
-                                            <span class="label-text">Date of Next Reminder</span>
-                                            <input type="date" id="datenextreminder" name="" class="form-control" required>
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div id="autoMailFields" style="display: none;">
-                            <div class="row" >
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label>
-                                            <span class="label-text">Frequency(day)</span>
-                                            <input type="number" id="frequencyInput" name="frequency" class="form-control" min="1" max="30" required>
-                                        </label>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label>
-                                            <span class="label-text">Number of reminder</span>
-                                            <input type="number" id="reminderCountInput" name="reminderCount" class="form-control" min="1" max="25" required>
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-12" style="color:green;">
-                                    Next Reminder Dates
-                                    <div id="reminderContainer" class="reminder-container"></div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div id="nextReminderField" style="display: none;" class="row"> 
-                            <div class="col-md-12">
-                                <div class="form-group">
-                                    <label>
-                                        <span class="label-text">Date of Next Reminder</span>
-                                        <input type="date" id="nextReminderInput" name="nextReminder" class="form-control" required>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- <button type="submit" class="btn btn-rounded btn-success float-right" id="mailsend">Submit</button> -->
-                        <button type="submit" class="btn btn-rounded btn-success float-right" onclick="submitForm()" >Submit</button>
+                        <button type="submit" class="btn btn-rounded btn-success float-right" onclick="submitForm()" >Send pending LOR</button>
                     </div>
                 </div>   
             </div>   
@@ -416,17 +379,56 @@
             inputs.forEach(input => input.value = '');
         }
 
-        function appendEmailRow(role, email) {
-            const newRow = ` 
-                <tr>
-                    <td><input type="checkbox"></td>
-                    <td><input type="checkbox"></td>
-                    <td style="width: 9%">${role}</td>
-                    <td style="width: 9%">${email}</td>
+        function appendEmailRow(name, email, sendAs) {
+            sendAs = sendAs || 'cc';
+            const rowKey = email.replace(/"/g, '');
+            const newRow = `
+                <tr data-email="${rowKey}">
+                    <td><input type="radio" name="sendas-${rowKey}" class="radio-to" value="to" ${sendAs === 'to' ? 'checked' : ''}></td>
+                    <td><input type="radio" name="sendas-${rowKey}" class="radio-cc" value="cc" ${sendAs === 'cc' ? 'checked' : ''}></td>
+                    <td><input type="radio" name="sendas-${rowKey}" class="radio-bcc" value="bcc" ${sendAs === 'bcc' ? 'checked' : ''}></td>
+                    <td class="party-name">${name || ''}</td>
+                    <td class="party-email">${email}</td>
                 </tr>
             `;
             $('#emailTableBody').append(newRow);
         }
+
+        function renderParties(parties) {
+            $('#emailTableBody').empty();
+            (parties || []).forEach(function (p) {
+                appendEmailRow(p.name || p.header_kind || p.role || '', p.email, p.send_as);
+            });
+        }
+
+        function collectPartiesFromTable() {
+            var parties = [];
+            $('#emailTableBody tr').each(function () {
+                var email = $(this).find('.party-email').text().trim();
+                var name = $(this).find('.party-name').text().trim();
+                var sendAs = $(this).find('input[type=radio]:checked').val() || 'cc';
+                if (email) {
+                    parties.push({ name: name, email: email, send_as: sendAs, header_kind: name });
+                }
+            });
+            return parties;
+        }
+
+        function collectSentTo() {
+            var sentTo = [];
+            collectPartiesFromTable().forEach(function (p) {
+                if (p.send_as === 'none') {
+                    return;
+                }
+                var row = { role: p.name };
+                row[p.send_as] = p.email;
+                sentTo.push(row);
+            });
+            return sentTo;
+        }
+
+        var initialLorParties = <?php echo json_encode($lorParties); ?>;
+        renderParties(initialLorParties);
 
 
         //reset add email modal fields
@@ -466,11 +468,12 @@
             }
 
             // If validation passes, append the new row
-            var row = `<tr>
-                <td><input type="checkbox" class="checkbox-to"></td>
-                <td><input type="checkbox" class="checkbox-cc"></td>
-                <td style="width: 9%">${role}</td>
-                <td style="width: 9%" >${email}</td>
+            var row = `<tr data-email="${email}">
+                <td><input type="radio" name="sendas-${email}" class="radio-to" value="to" checked></td>
+                <td><input type="radio" name="sendas-${email}" class="radio-cc" value="cc"></td>
+                <td><input type="radio" name="sendas-${email}" class="radio-bcc" value="bcc"></td>
+                <td class="party-name">${role}</td>
+                <td class="party-email">${email}</td>
             </tr>`;
             $('#emailTableBody').append(row);
 
@@ -483,96 +486,45 @@
 
         function submitForm() {
             var aid = '<?php echo $aid; ?>';  
-            var sentTo = [];  
+            var sentTo = collectSentTo();
             var Subject = $('#subject').val(); 
             var dateOfLetter = $('#date_of_letter').val(); 
-            var questions = $('#questionsTextarea').val().split('\n');
-            var questionsText =questions.join('\n');
-            var emailBody = questionsText.replace(/\n/g, '<br>');
-            // const formData = $('#mailForm').serialize();
-            console.log(Subject)
-            $('#emailTableBody tr').each(function () {
-                var toChecked = $(this).find('.checkbox-to').is(':checked');
-                var ccChecked = $(this).find('.checkbox-cc').is(':checked');
-                var role = $(this).find('td').eq(2).text().trim();  
-                var email = $(this).find('td').eq(3).text().trim(); 
-                var row = {}; 
-
-                if (toChecked) {
-                    row.to = email;
-                }
-
-                if (ccChecked) {
-                    row.cc = email;
-                }
-
-                if (toChecked || ccChecked) {
-                    row.role = role;
-                    sentTo.push(row);  
-                }
-            
-            });
-
-            var sentToJson = JSON.stringify(sentTo);
-            // Check if `sentTo` is empty
-            if (sentTo.length === 0) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Missing Receivers Information',
-                    text: 'Please select at least one receiver before submitting the form.'
-                });
-                return; // Stop the form submission process
-            }
-
-        
             var specialNote = document.getElementById('specialNoteTextarea').value; 
-           
+            var emailBody = $('#questionsTextarea').val().replace(/\n/g, '<br>');
             if (specialNote) {
                 emailBody += "<br><strong>Special Note:</strong><br>" + specialNote.replace(/\n/g, '<br>');  
             }
 
-            // emailBody += "<br><br>" + footerText.replace(/\n/g, '<br>');
-
-            var Subject = $('#subject').val(); 
-            var dateOfLetter = $('#date_of_letter').val(); 
-
-            // Get the values for the auto mail settings if enabled
-            var autoMailEnabled = $('#autoMailToggle').is(':checked');
-            var automailFix = null;
-
-            var sendtoday = $('#sent_today').is(':checked');
-            var sentDate = sendtoday ? new Date().toISOString().split('T')[0] : null;
-
-            if ($('#mail_automation_checkbox').is(':checked')) {
-                var nextReminderDate = $('#datenextreminder').val(); 
-            } else {
-                var nextReminderDate = null; 
+            if (sentTo.length === 0) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Missing receivers',
+                    text: 'Mark at least one person as To, Cc, or Bcc.'
+                });
+                return;
+            }
+            var hasTo = sentTo.some(function (r) { return !!r.to; });
+            if (!hasTo) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Need a To address',
+                    text: 'Mark one person as To. Others can be Cc or Bcc.'
+                });
+                return;
             }
 
-            if (autoMailEnabled) {
-                // Calculate the reminder dates
-                var reminderDates = calculateReminders();
-                automailFix = {
-                    frequency: $('#frequencyInput').val(),
-                    reminderCount: $('#reminderCountInput').val(),
-                    reminderDates: reminderDates
-                };
-            }
             $.ajax({
                 url: '<?php echo base_url('assignment/submit_viewlor'); ?>',
                 type: 'POST',
                 data: {
                     aid: aid,
-                    sent_to: sentToJson,
+                    sent_to: JSON.stringify(sentTo),
                     special_note: specialNote,
                     subject: Subject,
+                    appointment_subject: $('#appointment_subject').val(),
                     date_of_letter: dateOfLetter,
-                    automail_fix: JSON.stringify(automailFix),
-                    sent_date: sentDate,
-                    mail_automation: nextReminderDate,
-                    questions: JSON.stringify(questions) ,
+                    frequency_days: $('#frequencyInput').val(),
                     email_body: emailBody
-                    
                 },
                 success: function (response) {
                    var res = JSON.parse(response);
@@ -581,8 +533,8 @@
                         console.log('Emails to be sent:', sentToEmails);
                         Swal.fire({
                             icon: 'success',
-                            title: 'LOR Sent Successfully to:',
-                            html: `${sentToEmails}`,
+                            title: 'LOR sent (pending docs only)',
+                            html: `${sentToEmails}<br><small>Next dashboard reminder: ${res.next_due_on || ''}</small>`,
                             confirmButtonText: 'OK'
                         });
                     } else {
@@ -605,55 +557,6 @@
             specialNoteContainer.style.display = specialNoteContainer.style.display === 'none' ? 'block' : 'none';
         }
         
-        // Reminder calculations
-        function calculateReminders() {
-            const frequency = parseInt(document.getElementById('frequencyInput').value);
-            const numberOfReminders = parseInt(document.getElementById('reminderCountInput').value);
-            const reminderContainer = document.getElementById('reminderContainer');
-            reminderContainer.innerHTML = ''; 
-            let reminderDates = []; 
-            if (frequency && numberOfReminders) {
-                const today = new Date();
-                for (let i = 1; i <= numberOfReminders; i++) {
-                    const reminderDate = new Date(today);
-                    reminderDate.setDate(today.getDate() + (i * frequency)); 
-                    const formattedDate = reminderDate.toISOString().split('T')[0]; 
-                    reminderDates.push(formattedDate);
-                    const reminderItem = createReminderItem(formattedDate); 
-                    reminderContainer.appendChild(reminderItem);
-                }
-            }
-            return reminderDates; 
-        }
-
-        // Function to create a reminder item
-        function createReminderItem(formattedDate) {
-            const reminderItem = document.createElement('div');
-            reminderItem.className = 'reminder-item';
-
-            // Create input field for the reminder date
-            const reminderInput = document.createElement('input');
-            reminderInput.type = 'text';
-            reminderInput.value = formattedDate;
-            reminderInput.className = 'reminder-input';
-            reminderInput.readOnly = true;
-
-            // Create a cross icon to remove the reminder
-            const removeIcon = document.createElement('span');
-            removeIcon.innerHTML = '<i class="fa fa-times remove-icon"></i>';
-            removeIcon.onclick = function() {
-                reminderItem.remove(); 
-            };
-
-            // Append the input and icon to the reminder item
-            reminderItem.appendChild(reminderInput);
-            reminderItem.appendChild(removeIcon);
-            return reminderItem;
-        }
-
-        // Attach event listeners for input changes to calculate reminders
-        document.getElementById('frequencyInput').addEventListener('input', calculateReminders);
-        document.getElementById('reminderCountInput').addEventListener('input', calculateReminders);
         document.getElementById('specialNoteRadio').addEventListener('change', function() {
             document.getElementById('specialNoteContainer').style.display = this.checked ? 'block' : 'none';
         });
@@ -667,33 +570,6 @@
             if (!results[2]) return '';
             return decodeURIComponent(results[2].replace(/\+/g, ' '));
         }
-      
-        $('#autoMailToggle').change(function() {
-            if ($(this).is(':checked') && $('#mail_automation_checkbox').is(':checked')) {
-                $('#autoMailFields').show();
-                $('#nextReminderField').hide();
-                $('#mail_automation').hide();
-            } else {
-                $('#autoMailFields').hide();
-                $('#nextReminderField').hide();
-                $('#mail_automation').hide();
-            }
-        });
-
-        $('#mail_automation_checkbox').change(function() {
-            if ($(this).is(':checked')) {
-                $('#mail_automation').slideDown(); 
-                $('#autoMailToggle').prop('disabled', false);
-            } else {
-                $('#mail_automation').slideUp(); 
-                $('#autoMailToggle').prop('disabled', true); 
-                $('#autoMailFields').hide();
-                $('#nextReminderField').hide(); 
-                $('#mail_automation').hide();
-                $('#autoMailToggle').prop('checked', false);
-            }
-        });
-
 
     // function addRemove(){
     //     const myDiv =document.getElementById('mainContainer');
@@ -745,28 +621,18 @@ $(document).ready(function () {
                             const description = typeof item === "string" ? item : item.description;
                             const questionId = item.id || question.id;
                             if (typeof description === "string" && description.trim()) {
+                                const received = !!(item && item.received);
+                                const receivedChecked = received ? 'checked' : '';
+                                const receivedClass = received ? ' received' : '';
                                 const deleteIcon = `<i class="fas fa-trash" style="cursor:pointer;color:red;" onclick="deleteQuestion('${questionId}', ${index}, ${i})"></i>`;
-                                // questionsHTML += `
-                                // <div class="input-group">
-                                //     <div class="question-box" id="question-box-${questionId}">
-                                //         <label class="form-check">
-                                //             <input type="checkbox" value="${description}" class="form-check-input">
-                                //             <span class="form-check-label question-text" contenteditable="true" id="question-text-${questionId}">
-                                //                 ${description} ${deleteIcon}
-                                //             </span>
-                                //         </label>
-                                //         <input type="hidden" value="${questionId}" />
-                                //     </div>
-                                // `;
 
                                 questionsHTML +=`
                                 <div class="input-group" style="pointer-events: none; cursor: none;"  id="mainContainer">
-                                    <div class="question-box" id="question-box-${questionId}">
-                                        <div style="border-right: 2px solid black;">
-                                                <label class="form-check">
-                                                    <input type="checkbox" value="${description}" class="form-check-input">
-                                                    <span class="form-check-label question-text" contenteditable="false" id="question-text-${questionId}">                
-                                                    </span>
+                                    <div class="question-box${receivedClass}" id="question-box-${questionId}">
+                                        <div style="border-right: 2px solid black; pointer-events: auto; cursor: auto;">
+                                                <label class="form-check" style="margin:0;">
+                                                    <input type="checkbox" class="form-check-input received-check" data-id="${questionId}" ${receivedChecked}>
+                                                    <span class="form-check-label" style="font-size:11px;">Received</span>
                                                 </label>
                                          </div>
                                         <div style="margin:0px 20px 0px 20px;">
@@ -780,6 +646,10 @@ $(document).ready(function () {
                                         <input type="hidden" value="${questionId}" />
                                     </div>
                                 `;
+                                if (!received) {
+                                    questionsText += `${questionCount}. ${description}\n`;
+                                    questionCount++;
+                                }
                                 // <div class="input-group">
                                 //                 <div class="input-group-append">
                                 //                     <span class="input-group-text">.00</span>
@@ -790,8 +660,6 @@ $(document).ready(function () {
                                 //                     <span class="input-group-text">${deleteIcon}</span>
                                 //                 </div>
                                 //         </div>
-                                questionsText += `${questionCount}. ${description}\n`;
-                                questionCount++;
                             }
                         });
                     });
@@ -806,6 +674,7 @@ $(document).ready(function () {
                 }
 
                 $('#questionsContainer').html(questionsHTML);
+                bindReceivedChecks();
             } else {
                 console.error('Failed to fetch questions:', response.message);
             }
@@ -948,6 +817,92 @@ $(document).ready(function () {
             alert("Please enter a valid title before saving.");
         }
     });
+
+    $('#parseAppointmentBtn').on('click', function () {
+        $.ajax({
+            url: '<?php echo base_url('assignment/parse_appointment_mail'); ?>',
+            type: 'POST',
+            dataType: 'json',
+            data: { aid: aid, raw: $('#appointmentPaste').val() },
+            success: function (res) {
+                if (res.status === 'success') {
+                    $('#appointment_subject').val(res.subject || '');
+                    $('#subject').val(res.mail_subject || '');
+                    $('#our_ref').val(res.our_ref || '');
+                    renderParties(res.parties || []);
+                    Swal.fire({ icon: 'success', title: 'People saved', text: (res.parties || []).length + ' address(es) from the appointment mail.' });
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Could not parse', text: res.message || '' });
+                }
+            }
+        });
+    });
+
+    $('#savePartiesBtn').on('click', function () {
+        $.ajax({
+            url: '<?php echo base_url('assignment/save_lor_parties'); ?>',
+            type: 'POST',
+            dataType: 'json',
+            data: { aid: aid, parties: JSON.stringify(collectPartiesFromTable()) },
+            success: function (res) {
+                if (res.status === 'success') {
+                    Swal.fire({ icon: 'success', title: 'To / Cc / Bcc saved' });
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Save failed', text: res.message || '' });
+                }
+            }
+        });
+    });
+
+    $('#saveReminderBtn').on('click', function () {
+        $.ajax({
+            url: '<?php echo base_url('assignment/save_lor_reminder'); ?>',
+            type: 'POST',
+            dataType: 'json',
+            data: { aid: aid, frequency_days: $('#frequencyInput').val() },
+            success: function (res) {
+                if (res.status === 'success') {
+                    $('#nextDueLabel').text('Next dashboard reminder: ' + res.next_due_on);
+                    Swal.fire({ icon: 'success', title: 'Reminder set', text: 'Due on the dashboard on ' + res.next_due_on });
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Could not save reminder', text: res.message || '' });
+                }
+            }
+        });
+    });
+
+    function bindReceivedChecks() {
+        $('.received-check').off('change').on('change', function () {
+            var box = $(this);
+            var qid = box.data('id');
+            var received = box.is(':checked') ? 1 : 0;
+            $.ajax({
+                url: '<?php echo base_url('assignment/mark_lor_received'); ?>',
+                type: 'POST',
+                dataType: 'json',
+                data: { aid: aid, question_id: qid, received: received },
+                success: function (res) {
+                    $('#question-box-' + qid).toggleClass('received', !!received);
+                    rebuildPendingPreview(res.pending || []);
+                }
+            });
+        });
+    }
+
+    function rebuildPendingPreview(pendingList) {
+        if (!pendingList) {
+            return;
+        }
+        var username = '<?php echo addslashes($this->session->userdata('firstname') . ' ' . $this->session->userdata('lastname')); ?>';
+        var currentDate = new Date().toISOString().split('T')[0];
+        var text = headerText;
+        pendingList.forEach(function (desc, i) {
+            text += (i + 1) + '. ' + desc + '\n';
+        });
+        text += footerText + '\n' + username + '\nDate: ' + currentDate;
+        $('#questionsTextarea').val(text.trim());
+    }
+
 
     
     // function addQuestionToUI(newQuestion) {
