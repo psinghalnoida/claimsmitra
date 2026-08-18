@@ -44,11 +44,10 @@ W-01 Appoint  →  W-02 Land on desk  →  W-03 Handler owns file
       →  REG only: W-05 ILA then W-06 LOR
       →  STY: skip W-05 and W-06
       →  W-07 Report (meeting point) — online or offline, with media already/also on the file
-      →  W-08 Bill (pay office)
-      →  W-09 Tax invoice (TI)
-      →  W-10 Dispatch report
-      →  W-11 Payment (partial → complete)
-      →  W-12 Closed
+      →  W-08 Bill (pay office) + TI
+      →  W-10 Dispatch (portal / email / post / handover) — recorded, to pay office and/or other office
+      →  W-11 Await payment advice → chase balance or archive
+      →  W-12 Archived in record — keep file and media ≥ 3 years
 ```
 
 Cancel may happen from W-03 onward → status **Cancelled (11)**. Appointment transfer (R-07) may happen at W-01/W-02 without cancelling.
@@ -126,13 +125,11 @@ Accounts (or admin) raises **one bill per job** against the **pay office** (or c
 **Code status:** `5`.  
 **Rules:** R-22, R-23, R-24, R-25, R-26.
 
-Report delivery may wait for payment **or** proceed on credit — that is a pay-office commercial choice, not a fourth CIN.
-
 ---
 
 ### W-09 — Tax invoice issued (status **6** then **7**)
 
-TI number and date make the bill issued. Job moves to waiting for TI (**6**) then pending dispatch (**7**).  
+TI number and date make the bill issued. Job is then **pending dispatch**.  
 **Code status:** `6` Waiting for TI, `7` Pending for dispatch.  
 **Who sees this book:** Accounts and admin (R-17).
 
@@ -140,22 +137,32 @@ TI number and date make the bill issued. Job moves to waiting for TI (**6**) the
 
 ### W-10 — Dispatch (status **8**)
 
-Physical/email dispatch of report (and invoice). Tracking on `claims_dispatch`.  
-**Code status:** `8`.
+**After billing**, deliver the report (and invoice). **Must record** each act (R-30):
+
+| Mode | Code | Extra |
+|---|---|---|
+| Physical handover | 1 | Who received |
+| Post | 2 | Tracking no. |
+| Online portal | 3 | Portal / reference |
+| Email | 4 | Address sent to |
+
+**To:** paying office and/or other concerned office. Multiple dispatches allowed. Then **await payment advice** — dispatched is not closed.  
+**Code status:** `8`.  
+**Rules:** R-30, R-31.
 
 ---
 
-### W-11 — Payment (status **9** / **10**)
+### W-11 — Payment advice (status **9** if balance)
 
-Receipts hang off the bill; they must not overwrite history. Partial → **9**. Full (after TDS if any) → **10** complete.  
-**Code status:** `9` Partial pay, `10` Complete.  
-**Rules:** R-27.
+When advice is received, record it on the bill (R-27). If a **balance** remains, **pursue** it (partial **9**). If settled, archive. No advice yet = still waiting after dispatch.  
+**Rules:** R-31.
 
 ---
 
-### W-12 — Closed or cancelled
+### W-12 — Archived (status **10**) or cancelled (**11**)
 
-**10** = complete. **11** = cancelled (reason required). AR and appointment history remain.
+Settled cases are **archived in the record**, not deleted. Cancelled needs a reason. **File + media retained at least 3 years.**  
+**Rules:** R-32.
 
 ---
 
@@ -182,6 +189,7 @@ Until a distinct “supervisor” usertype exists, **usertype 2** is the supervi
 - Native foreign-currency invoices (R-26); USD/NPR remain a later change.
 - Formal appointment-transfer log (R-07 history).
 - Auto-file WhatsApp / live / inspection-app media onto `aid` as first-class sources.
+- Enforce 3-year retention in storage (R-32 is policy; no purge job yet).
 
 ---
 
@@ -191,3 +199,4 @@ Until a distinct “supervisor” usertype exists, **usertype 2** is the supervi
 |---|---|---|
 | 2026-08-18 | Adopt W-01–W-12 and seat visibility above. Incoming lists follow handler vs admin vs accounts. | `workflow.php` + incoming/dashboard filters. Vendor code persisted on bill save (R-23). |
 | 2026-08-18 | REG vs STY. Both require media. REG requires ILA then LOR. STY skips those two and goes to report. Report is the meeting point. | R-29. W-04–W-07 amended. |
+| 2026-08-18 | After bill: record dispatch (portal/email/post/handover, to pay or other office); await payment advice; chase balance or archive; retain ≥ 3 years. | R-30–R-32. W-10–W-12 amended. |

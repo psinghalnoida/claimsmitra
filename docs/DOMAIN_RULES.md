@@ -249,6 +249,35 @@ Payments (NEFT, TDS, partial/final) hang off the bill as history. Updating a rec
 
 **Why:** Partial pay and TDS are how insurer AR actually closes. Overwrite looks like the case is settled when it is not.
 
+### R-30 — Dispatch after billing must be recorded
+
+After the bill (and TI), the report is **dispatched**. The system must store every dispatch with:
+
+- **Mode:** online portal submission, **email**, **post**, or **physical handover**
+- **To whom:** **paying office** and/or **other concerned office** (appointing/policy/other)
+- Date, and tracking number when posted
+
+One job may have more than one dispatch (e.g. portal to insurer and post to pay office).
+
+**Why:** Delivery is how the debtor can pass the bill. Unrecorded handovers cannot be proved. Post to pay office vs another office is not the same act.
+
+### R-31 — After dispatch, wait for payment advice
+
+Dispatched jobs **await payment advice**. When advice is received:
+
+- If the bill is **not fully paid** (including TDS as agreed) → **pursue the balance** (status partial).
+- If it is **fully paid** (or written off by a later decision) → **archive** the case in the record.
+
+Advice is not the same as the bill (R-27). No advice yet = still waiting, not archived.
+
+**Why:** Accounts work is chase-or-file, not “dispatched = closed.”
+
+### R-32 — Keep file and media at least 3 years
+
+The case file, report, photos, and videos must be **retained for at least three years** after the case is archived (or cancelled). Do not purge earlier for space or “complete” status.
+
+**Why:** Insurer/survey disputes, IRDAI queries, and tax audits outlast the payment cycle.
+
 ---
 
 ## G. Implementation honesty
@@ -268,3 +297,4 @@ Existing tables (`claims_company` + profession flags, departments as a mixed LOB
 | 2026-08-18 | Initial rules captured from product-owner working model (vendor CINs, assignment, survey org, billing). | R-01–R-28 adopted. |
 | 2026-08-18 | Job workflow W-01–W-12 adopted; incoming lists follow seats (R-17). | See `docs/WORKFLOW.md`. Vendor code persisted on bill save (R-23). |
 | 2026-08-18 | REG vs STY. Media required on both. ILA/LOR only on REG. Report is the join. | R-29. |
+| 2026-08-18 | Dispatch modes + destination; await payment advice then chase or archive; retain file/media ≥ 3 years. | R-30–R-32. |

@@ -113,3 +113,16 @@ $config['workflow_statuses'] = array(
 
 /** Statuses accounts people work from (W-08 onward). */
 $config['workflow_accounts_statuses'] = array(5, 6, 7, 8, 9, 10);
+
+/** R-30 dispatch modes (claims_dispatch.dispatchmode). */
+$config['workflow_dispatch_modes'] = array(
+    '1' => 'Physical handover',
+    '2' => 'Post',
+    '3' => 'Online portal',
+    '4' => 'Email',
+);
+
+$config['workflow_dispatch_to'] = array(
+    'pay_office' => 'Paying office',
+    'other_office' => 'Other concerned office',
+);

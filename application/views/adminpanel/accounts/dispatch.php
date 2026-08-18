@@ -22,9 +22,10 @@
                                 <span class="label-text">Dispatch Mode: <span style="color:red">*</span></span>
                                 <select name="dispatchmode" id="dispatchmode" class="form-control">
                                     <option disabled selected>Select Dispatch Mode</option>
-                                    <option value="1">Dispatch By Hand</option>
-                                    <option value="2">Dispatch By Post</option>
-                                    <option value="3">Submitted Online</option>
+                                    <option value="1">Physical handover</option>
+                                    <option value="2">Post</option>
+                                    <option value="3">Online portal submission</option>
+                                    <option value="4">Email</option>
                                 </select>
                             </label>
                         </div>
@@ -42,8 +43,12 @@
                     <div class="col-md-4">
                         <div class="form-group">
                             <label>
-                                <span class="label-text">Description: <span style="color:red">*</span></span>
-                                <input type="text" name="description" id="description" placeholder="Description" class="form-control">
+                                <span class="label-text">Dispatch to: <span style="color:red">*</span></span>
+                                <select name="dispatch_to" id="dispatch_to" class="form-control" required>
+                                    <option disabled selected value="">Select office</option>
+                                    <option value="pay_office">Paying office</option>
+                                    <option value="other_office">Other concerned office</option>
+                                </select>
                             </label>
                         </div>
                     </div>
@@ -58,7 +63,15 @@
                     </div>
                 </div>
                 <div class="row">
-                    <div class="col-md-12" style="text-align:end">
+                    <div class="col-md-8">
+                        <div class="form-group">
+                            <label>
+                                <span class="label-text">Description: <span style="color:red">*</span></span>
+                                <input type="text" name="description" id="description" placeholder="Portal ref, email address, recipient, or other office name" class="form-control">
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-4" style="text-align:end">
                         <div class="form-group">
                             <button type="button" class="btn btn-success m-1">Submit</button>
                         </div>
@@ -125,13 +138,16 @@
                         var dispatchModeText = '';
                         switch(record.dispatchmode) {
                             case '1':
-                                dispatchModeText = 'Dispatch By Hand';
+                                dispatchModeText = 'Physical handover';
                                 break;
                             case '2':
-                                dispatchModeText = 'Dispatch By Post';
+                                dispatchModeText = 'Post';
                                 break;
                             case '3':
-                                dispatchModeText = 'Submitted Online';
+                                dispatchModeText = 'Online portal';
+                                break;
+                            case '4':
+                                dispatchModeText = 'Email';
                                 break;
                             default:
                                 dispatchModeText = 'Unknown';
