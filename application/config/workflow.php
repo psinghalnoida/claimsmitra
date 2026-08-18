@@ -13,6 +13,22 @@ $config['workflow_seats'] = array(
     '4' => 'accounts',
 );
 
+/** REG requires ILA+LOR; STY skips those. Both require media. See R-29. */
+$config['workflow_assignment_classes'] = array(
+    'REG' => array(
+        'label' => 'Regular',
+        'requires_media' => true,
+        'requires_ila' => true,
+        'requires_lor' => true,
+    ),
+    'STY' => array(
+        'label' => 'Stereotype',
+        'requires_media' => true,
+        'requires_ila' => false,
+        'requires_lor' => false,
+    ),
+);
+
 $config['workflow_statuses'] = array(
     1 => array(
         'code' => 'under_survey',
@@ -27,6 +43,7 @@ $config['workflow_statuses'] = array(
         'bootstrap' => 'success',
         'stage' => 'W-05',
         'search_aliases' => array('Photo Upload', 'ILA + Photo'),
+        'assignment_class' => 'REG',
     ),
     3 => array(
         'code' => 'lor',
@@ -34,6 +51,7 @@ $config['workflow_statuses'] = array(
         'bootstrap' => 'success',
         'stage' => 'W-06',
         'search_aliases' => array(),
+        'assignment_class' => 'REG',
     ),
     4 => array(
         'code' => 'fsr',
