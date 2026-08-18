@@ -10,6 +10,14 @@ class Assignment_model extends CI_Model
     date_default_timezone_set('Asia/Kolkata');
     $currentDateTime = now();
     $this->formattedDateTime = date('d-m-Y H:i:s', $currentDateTime);
+    $this->load->helper('workflow_helper');
+  }
+
+  private function assigneeVisibilityFromPost($postData, $assignAlias = 'CJA', $jobAlias = 'CJ')
+  {
+    $userRole = $postData['user_role'] ?? ($postData['usertype'] ?? '');
+    $userid = (int) $this->session->userdata('id');
+    workflow_apply_assignee_visibility($assignAlias, $jobAlias, $userRole, $userid);
   }
 
   public function getAdditionalDataByaid($aid)
@@ -862,26 +870,10 @@ class Assignment_model extends CI_Model
   {
     $departmentid = $postData['department'];
     $companyid = $postData['company'];
-    $userid = $this->session->userdata('id');
 
     // Define column names for searching
     $this->column_search = array('CJ.case_reference', 'CJ.aid', 'CTL.investigator_type');
-
-    // Status mapping for search
-    $status_map = [
-      'Under Survey' => 1,
-      'Photo Uploaded' => 2,
-      'LOR Sent' => 3,
-      'FSR' => 4,
-      'Billing' => 5,
-      'Waiting for TI' => 6,
-      'Pending for Dispatch' => 7,
-      'Dispatched' => 8,
-      'Partially Payment Received' => 9,
-      'Case Completed' => 10,
-      'Cancelled' => 11,
-
-    ];
+    $status_map = workflow_status_search_map();
 
     // Select required fields
     $this->db->select("CJ.id, CJ.case_reference, CJA.uid_from, CJA.departmentid, CJ.status, 
@@ -893,6 +885,7 @@ class Assignment_model extends CI_Model
     $this->db->join('claims_task_list as CTL', 'CTL.id = CJ.natureofjob', 'left');
     $this->db->where("CJA.departmentid", $departmentid);
     $this->db->where("CJA.cid_to", $companyid);
+    $this->assigneeVisibilityFromPost($postData);
     // print_r(json_encode($this->db->get()->result_array()));
     // exit;
     // Check if there is a search value
@@ -939,21 +932,7 @@ class Assignment_model extends CI_Model
 
     // Define column names for searching
     $this->column_search = array('CJ.case_reference', 'CJ.aid', 'CTL.investigator_type');
-
-    // Status mapping for search
-    $status_map = [
-      'Under Survey' => 1,
-      'Photo Uploaded' => 2,
-      'LOR Sent' => 3,
-      'FSR' => 4,
-      'Billing' => 5,
-      'Waiting for TI' => 6,
-      'Pending for Dispatch' => 7,
-      'Dispatched' => 8,
-      'Partially Payment Received' => 9,
-      'Case Completed' => 10,
-      'Cancelled' => 11,
-    ];
+    $status_map = workflow_status_search_map();
 
     // Select required fields
     $this->db->select("CJ.id, CJ.case_reference, CJA.uid_from, CJA.departmentid, CJ.status, 
@@ -1182,22 +1161,7 @@ class Assignment_model extends CI_Model
 
     // Define column names for searching
     $this->column_search = array('CJ.case_reference', 'CJ.aid', 'CTL.investigator_type');
-
-    // Status mapping for search
-    $status_map = [
-      'Under Survey' => 1,
-      'Photo Uploaded' => 2,
-      'LOR Sent' => 3,
-      'FSR' => 4,
-      'Billing' => 5,
-      'Waiting for TI' => 6,
-      'Pending for Dispatch' => 7,
-      'Dispatched' => 8,
-      'Partially Payment Received' => 9,
-      'Case Completed' => 10,
-      'Cancelled' => 11,
-
-    ];
+    $status_map = workflow_status_search_map();
 
     // Select required fields
     $this->db->select("CJ.id, CJ.case_reference, CJA.uid_from, CJA.departmentid, CJ.status, 
@@ -1210,6 +1174,7 @@ class Assignment_model extends CI_Model
     $this->db->where("CJ.status", 10);
     $this->db->where("CJA.departmentid", $departmentid);
     $this->db->where("CJA.cid_to", $companyid);
+    $this->assigneeVisibilityFromPost($postData);
 
     // Check if there is a search value
     if (isset($postData['search']['value']) && !empty($postData['search']['value'])) {

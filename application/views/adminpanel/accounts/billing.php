@@ -2411,6 +2411,7 @@
                 billing_user_name: billinguserName,
                 billing_mobile_num: billingmobileNumber,
                 billing_gst: billingstNumber,
+                billing_id: $('.billingto').val() || $('.billing_id').val() || ''
             }),
 
             ship_to: JSON.stringify({
@@ -2418,7 +2419,8 @@
                 shipping_branch_name: shippingbranchName,
                 shipping_user_name: shippinguserName,
                 shipping_mobile_num: shippingmobileNumber,
-                shipping_gst: shippinggstNumber
+                shipping_gst: shippinggstNumber,
+                shipbilling_id: $('.shipbillingto').val() || ''
             }),
             total: total.toFixed(2),
             grandtotal: grandtotal.toFixed(2),

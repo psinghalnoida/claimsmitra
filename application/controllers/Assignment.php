@@ -45,26 +45,9 @@ class Assignment extends CI_Controller
                 foreach ($jobData as $jobValue) {
                     $insureddata = json_decode($jobValue->jobdata);
                     $i++;
-                    $case_status = null;
+                    $case_status = $this->getCaseStatusLabel($jobValue->status);
                     $address = null;
-                    if ($jobValue->status == 1) {
-                        $case_status = '<span class="label label-info">Under Survey</span>';
-                    } else if ($jobValue->status == 2) {
-                        $case_status = '<span class="label label-success">Photo Upload</span>';
-                    } else if ($jobValue->status == 3) {
-                        $case_status = '<span class="label label-success">LOR Sent</span>';
-                    } else if ($jobValue->status == 4) {
-                        $case_status = '<span class="label label-success">FSR</span>';
-                    } else if ($jobValue->status == 5) {
-                        $case_status = '<span class="label label-success">Bill Generated</span>';
-                    } else if ($jobValue->status == 6) {
-                        $case_status = '<span class="label label-warning">Waiting for TI</span>';
-                    } else if ($jobValue->status == 7) {
-                        $case_status = '<span class="label label-warning">Pending for Dispatch</span>';
-                    } else if ($jobValue->status == 8) {
-                        $case_status = '<span class="label label-success">Dispatched</span>';
-                    } else if ($jobValue->status == 11) {
-                        $case_status = '<span class="label label-danger">Cancelled</span>';
+                    if ($jobValue->status == 11) {
                         $cancelReason = $this->assignment->getCancelReason($jobValue->aid);
                     }
                     if ($jobValue->uid_to != 0) {
@@ -262,24 +245,7 @@ class Assignment extends CI_Controller
     // Helper: Get status label
     private function getCaseStatusLabel($status)
     {
-        $labels = [
-            1 => ['Under Survey', 'info'],
-            2 => ['Photo Upload', 'success'],
-            3 => ['LOR Sent', 'success'],
-            4 => ['FSR', 'success'],
-            5 => ['Bill Generated', 'success'],
-            6 => ['Waiting for TI', 'warning'],
-            7 => ['Pending for Dispatch', 'warning'],
-            8 => ['Dispatched', 'success'],
-            11 => ['Cancelled', 'danger'],
-        ];
-
-        if (isset($labels[$status])) {
-            [$label, $class] = $labels[$status];
-            return "<span class=\"label label-{$class}\">{$label}</span>";
-        }
-
-        return '<span class="label label-default">Unknown</span>';
+        return workflow_status_badge_html($status);
     }
 
     // Helper: Get user display
@@ -352,28 +318,9 @@ class Assignment extends CI_Controller
                 foreach ($jobData as $jobValue) {
                     $insureddata = json_decode($jobValue->jobdata);
                     $i++;
-                    $case_status = null;
-                    if ($jobValue->status == 1) {
-                        $case_status = '<span class="label label-info">Under Survey</span>';
-                    } else if ($jobValue->status == 2) {
-                        $case_status = '<span class="label label-success">Photo Upload</span>';
-                    } else if ($jobValue->status == 3) {
-                        $case_status = '<span class="label label-success">LOR Sent</span>';
-                    } else if ($jobValue->status == 4) {
-                        $case_status = '<span class="label label-success">FSR</span>';
-                    } else if ($jobValue->status == 5) {
-                        $case_status = '<span class="label label-success">Bill Generated</span>';
-                    } else if ($jobValue->status == 6) {
-                        $case_status = '<span class="label label-warning">Waiting for TI</span>';
-                    } else if ($jobValue->status == 7) {
-                        $case_status = '<span class="label label-warning">Pending for Dispatch</span>';
-                    } else if ($jobValue->status == 8) {
-                        $case_status = '<span class="label label-success">Dispatched</span>';
-                    } else if ($jobValue->status == 11) {
-                        $case_status = '<span class="label label-danger">Cancelled</span>';
+                    $case_status = $this->getCaseStatusLabel($jobValue->status);
+                    if ($jobValue->status == 11) {
                         $cancelReason = $this->assignment->getCancelReason($jobValue->aid);
-                    } else if ($jobValue->status == 10) {
-                        $case_status = '<span class="label label-success">Case Completed</span>';
                     }
                     if ($jobValue->uid_to != 0) {
                         $assignTo = $this->home->getuserdatabyid($jobValue->uid_to);
