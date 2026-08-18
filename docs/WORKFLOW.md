@@ -27,8 +27,8 @@ Every case is marked **REG** (regular) or **STY** (stereotype) when it is entere
 
 | Class | Media | ILA | LOR | Field template |
 |---|---|---|---|---|
-| **REG** | Required | Required | Required | Optional |
-| **STY** | Required | **Default off; on if this job needs it** | **Default off; on if this job needs it** | Expected (R-34) |
+| **REG** (no field template) | Required | Required | Required | — |
+| **STY** (job uses a field template) | Required | **As the template says** | **As the template says** | Required (R-34) |
 
 Report is the **meeting point**. It may be prepared online (from the template / forms) or offline; the system must still receive the report **together with** photos and videos.
 
@@ -42,7 +42,7 @@ Report is the **meeting point**. It may be prepared online (from the template / 
 W-01 Appoint  →  W-02 Land on desk  →  W-03 Handler owns file
       →  W-03a Acknowledge assignment (prepared email + optional field template)
       →  W-04 Field + media (both REG and STY)
-      →  W-05 ILA then W-06 LOR  — required on REG; on STY only if flagged on the job
+      →  W-05 ILA then W-06 LOR  — required unless the **field template** says skip
       →  W-07 Report (meeting point) — online from template/forms or offline, with media on the file
       →  W-08 Bill (pay office) + TI
       →  W-10 Dispatch (portal / email / post / handover) — recorded, to pay office and/or other office
@@ -108,7 +108,7 @@ Cancel may happen from W-03 onward → status **Cancelled (11)**. Appointment tr
 
 ### W-05 — ILA (status **2**) — **REG only**
 
-Immediate Loss Advice. **Mandatory on REG.** On **STY**, only if this job’s ILA/LOR flag is on.  
+Immediate Loss Advice. **Mandatory** unless the job’s **field template** says skip ILA.  
 **Code status:** `2`.  
 **Rules:** R-29.
 
@@ -116,7 +116,7 @@ Immediate Loss Advice. **Mandatory on REG.** On **STY**, only if this job’s IL
 
 ### W-06 — LOR (status **3**) — **REG only**
 
-Letter of Requirement: a living checklist of documents asked from the insured / insurer. **Mandatory on REG after ILA.** On **STY**, only if this job’s ILA/LOR flag is on.
+Letter of Requirement: a living checklist of documents asked from the insured / insurer. **Mandatory after ILA** unless the job’s **field template** says skip LOR.
 
 **Job status:** `claims_livelocationjob.status = 3` after the first send (do not move the job backwards if it is already at report or later).  
 **Letter row:** `claims_sendlor` — draft until sent; `next_due_on` drives the dashboard nag.  
@@ -128,16 +128,16 @@ Letter of Requirement: a living checklist of documents asked from the insured / 
 ```mermaid
 flowchart TD
   W04[W-04 Field + media]
-  class{REG or STY?}
+  class{Field template says send ILA/LOR?}
   ILA[W-05 ILA]
   LOR[W-06 LOR chase]
   RPT[W-07 Report — meeting point]
 
   W04 --> class
-  class -->|REG, or STY with ILA/LOR on| ILA
+  class -->|yes, or no template| ILA
   ILA --> LOR
   LOR --> RPT
-  class -->|STY with ILA/LOR off| RPT
+  class -->|template says skip| RPT
 ```
 
 #### LOR chase (review, then send)
@@ -255,7 +255,7 @@ Until a distinct “supervisor” usertype exists, **usertype 2** is the supervi
 
 ## What this workflow does not do yet
 
-- Persist **REG/STY** and the per-job **ILA/LOR required** flag on STY (R-29).
+- Persist **REG/STY** from whether a field template is applied, and honour that template’s Send ILA / Send LOR flags (R-29, R-34).
 - Join acknowledgement mail + field-template pick into one W-03a screen (R-34, R-35). Today they are separate: `/prepareemail` vs `/createtemplate` / new-case `Select Template`.
 - Distinct supervisor usertype vs admin (R-15 full tree).
 - Survey branch (GST) in the session switcher (still company + department).
@@ -273,6 +273,7 @@ Until a distinct “supervisor” usertype exists, **usertype 2** is the supervi
 | 2026-08-18 | Adopt W-01–W-12 and seat visibility above. Incoming lists follow handler vs admin vs accounts. | `workflow.php` + incoming/dashboard filters. Vendor code persisted on bill save (R-23). |
 | 2026-08-18 | REG vs STY. Both require media. REG requires ILA then LOR. STY skips those two and goes to report. Report is the meeting point. | R-29. W-04–W-07 amended. |
 | 2026-08-18 | STY may still need ILA/LOR. Ack after entry. Field templates for repeats. | R-29, R-34, R-35. W-03a. |
+| 2026-08-18 | Send ILA / Send LOR decided on the field template. | R-34. |
 | 2026-08-18 | After bill: record dispatch (portal/email/post/handover, to pay or other office); await payment advice; chase balance or archive; retain ≥ 3 years. | R-30–R-32. W-10–W-12 amended. |
 | 2026-08-18 | Document LOR letter flow as built vs job stage W-06. | W-06 diagrams. |
 | 2026-08-18 | LOR chase: paste appointment mail, received/pending, frequency dashboard nag, subject + our ref. | R-33. W-06. |

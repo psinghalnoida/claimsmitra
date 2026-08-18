@@ -34,8 +34,10 @@
                         <?php
                             $templateId = $template['id'] ?? 0;
                             $templateName = htmlspecialchars($template['template_name'] ?? '');
+                            $ila = !empty($template['send_ila']) ? 'ILA' : 'no ILA';
+                            $lor = !empty($template['send_lor']) ? 'LOR' : 'no LOR';
                         ?>
-                        <option value="<?= $templateId ?>"><?= $templateName ?></option>
+                        <option value="<?= $templateId ?>"><?= $templateName ?> (<?= $ila ?>, <?= $lor ?>)</option>
                     <?php endforeach; ?>
                 <?php else : ?>
                     <option disabled>No templates found</option>

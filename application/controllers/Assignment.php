@@ -2152,6 +2152,20 @@ class Assignment extends CI_Controller
                     'asset_value' => $case_data['asset_value'] ?? null
                 ], fn($value) => !is_null($value) && $value !== '');
 
+                if (!empty($jobdata['template_name'])) {
+                    workflow_ensure_template_schema();
+                    $tpl = $this->assignment->getTemplateById($jobdata['template_name']);
+                    if ($tpl) {
+                        $jobdata['send_ila'] = !empty($tpl['send_ila']) ? '1' : '0';
+                        $jobdata['send_lor'] = !empty($tpl['send_lor']) ? '1' : '0';
+                        $jobdata['assignment_class'] = 'STY';
+                    }
+                } else {
+                    $jobdata['send_ila'] = '1';
+                    $jobdata['send_lor'] = '1';
+                    $jobdata['assignment_class'] = 'REG';
+                }
+
                 // Prepare data for database insertion
                 $data = [
                     'aid' => date("dmyhis") . rand(10, 100),
@@ -2466,6 +2480,7 @@ class Assignment extends CI_Controller
                     $job = $this->assignment->getCaseReferenceByAid($aid);
                     $ourRef = !empty($job['case_reference']) ? $job['case_reference'] : $aid;
                     $lorRow = $this->assignment->getSendlorRow($aid);
+                    $jobdata = json_decode($this->assignment->getjobdatabyAid($aid), true);
                     $data = [
                         'defaultcompany' => $defaultcompany,
                         'defaultdepartment' => $defaultdepartment,
@@ -2477,6 +2492,7 @@ class Assignment extends CI_Controller
                         'lorRow' => $lorRow,
                         'lorParties' => $this->assignment->getLorParties($aid),
                         'lorReminderDays' => $this->config->item('workflow_lor_reminder_days'),
+                        'requiresLor' => workflow_requires_lor($jobdata),
                     ];
                     $this->load->view('adminpanel/accounts/viewlor', $data);
                 }
@@ -4494,6 +4510,10 @@ class Assignment extends CI_Controller
         // Start DB transaction
         $this->db->trans_start();
 
+        $sendIla = workflow_flag_on($essential['send_ila'] ?? 0) ? 1 : 0;
+        $sendLor = workflow_flag_on($essential['send_lor'] ?? 0) ? 1 : 0;
+        workflow_ensure_template_schema();
+
         if (!empty($essential['id'])) {
             // Update
             $updateData = [
@@ -4501,6 +4521,8 @@ class Assignment extends CI_Controller
                 'casedata' => $caseJson,
                 'natureofjob' => $essential['natureofjob'] ?? '',
                 'template_name' => $essential['template_name'] ?? '',
+                'send_ila' => $sendIla,
+                'send_lor' => $sendLor,
             ];
             $is_saved = $this->assignment->updateEssentialDatatemplate($updateData, $essential['id']);
             $recordId = $essential['id'];
@@ -4513,6 +4535,8 @@ class Assignment extends CI_Controller
                 'natureofjob' => $essential['natureofjob'] ?? '',
                 'essentialdata' => $essentialJson,
                 'casedata' => $caseJson,
+                'send_ila' => $sendIla,
+                'send_lor' => $sendLor,
                 'createdAt' => date('Y-m-d H:i:s')
             ];
 

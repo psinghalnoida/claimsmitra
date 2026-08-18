@@ -117,6 +117,9 @@ $nextDueOn = $lorRow['next_due_on'] ?? '';
         </div>
     </div>
     <section class="main--content" style="border: 1px solid #E5E4E2; margin-left: 15px;margin-right:15px;padding-top: 0px;">
+        <?php if (isset($requiresLor) && !$requiresLor) { ?>
+        <div class="alert alert-info" style="margin:15px;">This job’s <strong>field template</strong> says skip LOR. You can still prepare one if the insurer asks, but it is not required on the path.</div>
+        <?php } ?>
         <div class="row gutter-20">
             <div class="col-md-5 pr-1">
                 <div class="panel pb-5 mb-3">
