@@ -23,16 +23,16 @@ Code source of truth for stage numbers and seats: `application/config/workflow.p
 
 ## Assignment class: REG or STY
 
-Every case is marked **REG** (regular) or **STY** (stereotype) when it is entered. Both classes **require media** (photos and videos) on the file before the report can be received. They differ only on ILA and LOR.
+Every case is marked **REG** (regular) or **STY** (stereotype) when it is entered. Both classes **require media**. STY is a **repeat** (same insurer, insured, policy, place of survey, similar fields) and is filled from a **field template** when one exists.
 
-| Class | Media | ILA (Immediate Loss Advice) | LOR | Then |
+| Class | Media | ILA | LOR | Field template |
 |---|---|---|---|---|
-| **REG** | Required | Required | Required | Report |
-| **STY** | Required | Not on the path | Not on the path | Straight to reporting |
+| **REG** | Required | Required | Required | Optional |
+| **STY** | Required | **Default off; on if this job needs it** | **Default off; on if this job needs it** | Expected (R-34) |
 
-Report is the **meeting point**. It may be prepared online (template) or offline; the system must still receive the report **together with** photos and videos. Media may arrive by upload, WhatsApp, live survey, or the Claims Mitra inspection app (any mix).
+Report is the **meeting point**. It may be prepared online (from the template / forms) or offline; the system must still receive the report **together with** photos and videos.
 
-**Rule:** R-29.
+**Rules:** R-29, R-34, R-35.
 
 ---
 
@@ -40,10 +40,10 @@ Report is the **meeting point**. It may be prepared online (template) or offline
 
 ```
 W-01 Appoint  →  W-02 Land on desk  →  W-03 Handler owns file
+      →  W-03a Acknowledge assignment (prepared email + optional field template)
       →  W-04 Field + media (both REG and STY)
-      →  REG only: W-05 ILA then W-06 LOR
-      →  STY: skip W-05 and W-06
-      →  W-07 Report (meeting point) — online or offline, with media already/also on the file
+      →  W-05 ILA then W-06 LOR  — required on REG; on STY only if flagged on the job
+      →  W-07 Report (meeting point) — online from template/forms or offline, with media on the file
       →  W-08 Bill (pay office) + TI
       →  W-10 Dispatch (portal / email / post / handover) — recorded, to pay office and/or other office
       →  W-11 Await payment advice → chase balance or archive
@@ -86,6 +86,17 @@ Cancel may happen from W-03 onward → status **Cancelled (11)**. Appointment tr
 
 ---
 
+### W-03a — Acknowledge the appointment
+
+**Who:** Handler.  
+**What:** Small form: nature of assignment, mail subject, To/Cc. The system **prepares** the acknowledgement (“we have the assignment; quote our ref”). Handler checks and sends. **At this step they may select a field template** (R-34) so the repeat insurer/insured/policy/place fields load before survey.
+
+**As built today:** Case sidebar **Email** (`/prepareemail`) is a generic Summernote mailer with **email-body** templates (`claims_email`) and dummy To/Cc. Static copy of the ack lives in `preview.php`. **Field templates** (`claims_templates`) are created under `/createtemplate` and optionally chosen on the new-case form (`template_name`). They are **not** yet one screen with the ack.
+
+**Rules:** R-35, R-34.
+
+---
+
 ### W-04 — Field work and media (status **1 Under Survey**)
 
 **Who:** Handler + inspectors.  
@@ -97,7 +108,7 @@ Cancel may happen from W-03 onward → status **Cancelled (11)**. Appointment tr
 
 ### W-05 — ILA (status **2**) — **REG only**
 
-Immediate Loss Advice. **Mandatory on REG.** **Not on the STY path** (STY does not skip media; it skips this document).  
+Immediate Loss Advice. **Mandatory on REG.** On **STY**, only if this job’s ILA/LOR flag is on.  
 **Code status:** `2`.  
 **Rules:** R-29.
 
@@ -105,7 +116,7 @@ Immediate Loss Advice. **Mandatory on REG.** **Not on the STY path** (STY does n
 
 ### W-06 — LOR (status **3**) — **REG only**
 
-Letter of Requirement: a living checklist of documents asked from the insured / insurer. **Mandatory on REG after ILA. Not on the STY path.**
+Letter of Requirement: a living checklist of documents asked from the insured / insurer. **Mandatory on REG after ILA.** On **STY**, only if this job’s ILA/LOR flag is on.
 
 **Job status:** `claims_livelocationjob.status = 3` after the first send (do not move the job backwards if it is already at report or later).  
 **Letter row:** `claims_sendlor` — draft until sent; `next_due_on` drives the dashboard nag.  
@@ -123,10 +134,10 @@ flowchart TD
   RPT[W-07 Report — meeting point]
 
   W04 --> class
-  class -->|REG| ILA
+  class -->|REG, or STY with ILA/LOR on| ILA
   ILA --> LOR
   LOR --> RPT
-  class -->|STY: skip ILA and LOR| RPT
+  class -->|STY with ILA/LOR off| RPT
 ```
 
 #### LOR chase (review, then send)
@@ -244,7 +255,8 @@ Until a distinct “supervisor” usertype exists, **usertype 2** is the supervi
 
 ## What this workflow does not do yet
 
-- Persist **REG/STY** on the job and skip ILA/LOR in code for STY (R-29 is spec; status chain is still linear).
+- Persist **REG/STY** and the per-job **ILA/LOR required** flag on STY (R-29).
+- Join acknowledgement mail + field-template pick into one W-03a screen (R-34, R-35). Today they are separate: `/prepareemail` vs `/createtemplate` / new-case `Select Template`.
 - Distinct supervisor usertype vs admin (R-15 full tree).
 - Survey branch (GST) in the session switcher (still company + department).
 - Native foreign-currency invoices (R-26); USD/NPR remain a later change.
@@ -260,6 +272,7 @@ Until a distinct “supervisor” usertype exists, **usertype 2** is the supervi
 |---|---|---|
 | 2026-08-18 | Adopt W-01–W-12 and seat visibility above. Incoming lists follow handler vs admin vs accounts. | `workflow.php` + incoming/dashboard filters. Vendor code persisted on bill save (R-23). |
 | 2026-08-18 | REG vs STY. Both require media. REG requires ILA then LOR. STY skips those two and goes to report. Report is the meeting point. | R-29. W-04–W-07 amended. |
+| 2026-08-18 | STY may still need ILA/LOR. Ack after entry. Field templates for repeats. | R-29, R-34, R-35. W-03a. |
 | 2026-08-18 | After bill: record dispatch (portal/email/post/handover, to pay or other office); await payment advice; chase balance or archive; retain ≥ 3 years. | R-30–R-32. W-10–W-12 amended. |
 | 2026-08-18 | Document LOR letter flow as built vs job stage W-06. | W-06 diagrams. |
 | 2026-08-18 | LOR chase: paste appointment mail, received/pending, frequency dashboard nag, subject + our ref. | R-33. W-06. |

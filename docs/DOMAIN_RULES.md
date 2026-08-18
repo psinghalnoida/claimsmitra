@@ -195,20 +195,38 @@ Minimum snapshot:
 
 **Why:** “Cattle spot” is a product; Miscellaneous/Crop is the licence/desk. One string cannot drive templates, SLA, and supervisor books.
 
-### R-29 — REG and STY; both require media
+### R-29 — REG and STY; both require media; STY may still need ILA/LOR
 
 Every assignment is **REG** (regular) or **STY** (stereotype).
 
 - **Both** require photos and videos on the file (upload, WhatsApp, live survey, and/or inspection app).
 - **REG** must go through **ILA** then **LOR** before the report.
-- **STY** does **not** require ILA or LOR; it goes to reporting after media.
-- The **report** is the meeting point (online template or offline file). The system must receive the report **along with** the media.
+- **STY** is a **repeat** of the same insurer / insured / policy / place of survey (and similar survey fields). It **defaults** to skip ILA and LOR, but **some STY jobs still require them**. That is a flag on the job, not a second class.
+- The **report** is the meeting point (online from a field template, or offline). The system must receive the report **along with** the media.
 
-**Why:** Stereotype jobs must not be forced through ILA/LOR, but they are not paper-only. Without media the report has no evidence. Regular jobs need ILA/LOR for insurer TAT and document chase.
+**Why:** Stereotype work is copy-forward, not paper-only. Forcing every STY through ILA/LOR slows cattle/spot repeats; forbidding ILA/LOR on every STY breaks the insurer when that repeat still needs a document chase.
+
+### R-34 — Field templates copy repeating survey data
+
+A **field template** is a named snapshot of the survey form: insurer/broker offices, insured, policy, place of survey, nature of job, and the other fields the handler fills for that product. Save once from a filled report; call it on the next similar case.
+
+- Templates belong to the **handler** (saved against `userId`) and a **nature of job**.
+- Applying a template pre-fills the new job. It does not change prime assignee, AR, or CIN.
+- Distinct from **email body templates** (`claims_email`), which are letter wording only.
+
+**Why:** STY exists because the same insurer keeps sending the same insured at the same yard. Re-typing GSTIN, policy, and place is how files drift.
+
+### R-35 — Acknowledge the assignment before field work
+
+After the case is **entered** and a handler owns it, the handler sends an **acknowledgement** to the appointing thread: nature of assignment, mail subject, To/Cc (from the appointment mail), and a prepared email they **check and send**. At this same step they may **select a field template** (R-34).
+
+This is not ILA and not LOR. It only confirms “we have the appointment.”
+
+**Why:** Insurer desks expect a same-day ack on their subject line. Mixing ack with ILA/LOR delays the receipt confirmation.
 
 ### R-33 — LOR chase is review-then-send
 
-On **REG**, LOR is a living document checklist, not a one-shot letter.
+On **REG**, and on **STY when ILA/LOR is on for that job**, LOR is a living document checklist, not a one-shot letter.
 
 - Paste the **appointment mail** (subject + people). The system **parses and stores** addresses and the original subject.
 - Each stored person is marked **To / Cc / Bcc** (or skip this send).
@@ -310,5 +328,6 @@ Existing tables (`claims_company` + profession flags, departments as a mixed LOB
 | 2026-08-18 | Initial rules captured from product-owner working model (vendor CINs, assignment, survey org, billing). | R-01–R-28 adopted. |
 | 2026-08-18 | Job workflow W-01–W-12 adopted; incoming lists follow seats (R-17). | See `docs/WORKFLOW.md`. Vendor code persisted on bill save (R-23). |
 | 2026-08-18 | REG vs STY. Media required on both. ILA/LOR only on REG. Report is the join. | R-29. |
+| 2026-08-18 | STY may still require ILA/LOR per job. Field templates for repeat insurer/insured/policy/place. Ack email after entry; template selectable then. | R-29 amended. R-34, R-35. |
 | 2026-08-18 | Dispatch modes + destination; await payment advice then chase or archive; retain file/media ≥ 3 years. | R-30–R-32. |
 | 2026-08-18 | LOR chase: paste appointment mail, To/Cc/Bcc, mark received, dashboard frequency reminders, subject = appointment + our ref. No silent auto-mail. | R-33. |

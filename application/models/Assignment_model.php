@@ -303,7 +303,7 @@ class Assignment_model extends CI_Model
   private function getTemplateFieldById($templateid, $field)
   {
     $this->db->select($field);
-    $this->db->from('template_name');
+    $this->db->from('claims_templates');
     $this->db->where('id', $templateid);
     $query = $this->db->get();
     if ($query->num_rows() > 0) {

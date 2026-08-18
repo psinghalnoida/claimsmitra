@@ -13,19 +13,21 @@ $config['workflow_seats'] = array(
     '4' => 'accounts',
 );
 
-/** REG requires ILA+LOR; STY skips those. Both require media. See R-29. */
+/** REG requires ILA+LOR; STY defaults off but may turn them on per job. See R-29. */
 $config['workflow_assignment_classes'] = array(
     'REG' => array(
         'label' => 'Regular',
         'requires_media' => true,
         'requires_ila' => true,
         'requires_lor' => true,
+        'uses_field_template' => false,
     ),
     'STY' => array(
         'label' => 'Stereotype',
         'requires_media' => true,
-        'requires_ila' => false,
-        'requires_lor' => false,
+        'requires_ila' => 'optional',
+        'requires_lor' => 'optional',
+        'uses_field_template' => true,
     ),
 );
 
