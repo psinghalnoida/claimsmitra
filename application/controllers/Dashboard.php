@@ -6,6 +6,7 @@ class Dashboard extends CI_Controller{
     $this->load->library('form_validation');
     $this->load->model('dashboard_model');
     $this->load->model('company_model','company');
+    $this->load->model('assignment_model', 'assignment');
     $this->data = array();
   }
 
@@ -75,6 +76,7 @@ class Dashboard extends CI_Controller{
                                       'color' => '#e74c3c'];
               }
               $user_id = $this->session->userdata('id');
+              $lor_due = $this->assignment->getLorDueJobs($defaultcompany, $defaultdepartment, $usertype, $user_id);
               // $companies = $this->company->getCompaniesByUserId($user_id);
               $data = [
                 'defaultcompany' => $defaultcompany,
@@ -87,6 +89,8 @@ class Dashboard extends CI_Controller{
                 'total_dispatch_cases' => $total_dispatch_cases,
                 'outgoing_livelocation_cases' => $this->dashboard_model->getOutgoinglivelocationjobs(),
                 'favcontact' => $this->dashboard_model->allUser(),
+                'lor_due' => $lor_due,
+                'data_param' => $encrypted_json,
                 // 'companies' =>  $companies,
                 'view' => "Dashboard",
               ];

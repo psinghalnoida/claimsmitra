@@ -9,6 +9,16 @@
                     <div class="col-md-12">
                         <div class="panel" style="margin-top:15px;">
                             <div class="panel-content">
+                                <?php if (!empty($lor_due)) { ?>
+                                <div class="alert alert-warning">
+                                    <strong>LOR due:</strong>
+                                    <?php foreach ($lor_due as $dueRow) {
+                                        $q = base64_encode($this->encryption->encrypt($dueRow['aid']));
+                                        $dataQs = isset($data_param) ? $data_param : $this->input->get('data');
+                                        echo '<a href="' . base_url('viewlor?q=' . $q . '&data=' . $dataQs) . '">' . htmlspecialchars($dueRow['aid']) . ' (' . (int) $dueRow['pending_count'] . ' pending)</a> &nbsp; ';
+                                    } ?>
+                                </div>
+                                <?php } ?>
                                 <div class="row">
                                     <div class="col-12">
                                         <table id="incomingcases" class="table table-bordered table-hover" style="width:100%;overflow-wrap: anywhere;">
