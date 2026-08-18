@@ -8,6 +8,16 @@ DB_USER="adwiti_claimsmitra_db"
 DB_PASS="ij9eSb4PFkPunwU"
 SOCKET="/run/mysqld/mysqld.sock"
 
+ensure_mysql_socket() {
+  sudo mkdir -p /run/mysqld /var/run/mysqld
+  sudo chown mysql:mysql /run/mysqld /var/run/mysqld
+  if [[ -S "${SOCKET}" && ! -e /var/run/mysqld/mysqld.sock ]]; then
+    sudo ln -sf "${SOCKET}" /var/run/mysqld/mysqld.sock
+  fi
+}
+
+ensure_mysql_socket
+
 mysql_admin() {
   if mysqladmin ping --socket="${SOCKET}" --silent 2>/dev/null; then
     sudo mysql --socket="${SOCKET}" "$@"

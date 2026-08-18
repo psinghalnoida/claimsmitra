@@ -4,6 +4,16 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SOCKET="/run/mysqld/mysqld.sock"
 
+ensure_mysql_socket() {
+  sudo mkdir -p /run/mysqld /var/run/mysqld
+  sudo chown mysql:mysql /run/mysqld /var/run/mysqld
+  if [[ -S "${SOCKET}" && ! -e /var/run/mysqld/mysqld.sock ]]; then
+    sudo ln -sf "${SOCKET}" /var/run/mysqld/mysqld.sock
+  fi
+}
+
+ensure_mysql_socket
+
 echo "Starting MariaDB if needed..."
 if ! mysqladmin ping --socket="${SOCKET}" --silent 2>/dev/null; then
   sudo mkdir -p /run/mysqld
