@@ -93,37 +93,58 @@ if (!function_exists('workflow_ensure_template_schema')) {
         if (!$CI->db->field_exists('send_lor', 'claims_templates')) {
             $CI->db->query('ALTER TABLE `claims_templates` ADD `send_lor` TINYINT(1) NOT NULL DEFAULT 0');
         }
+        if (!$CI->db->field_exists('submission_tat_days', 'claims_templates')) {
+            $CI->db->query('ALTER TABLE `claims_templates` ADD `submission_tat_days` INT NOT NULL DEFAULT 15');
+        }
+    }
+}
+
+if (!function_exists('workflow_assignment_class')) {
+    function workflow_assignment_class($jobdata)
+    {
+        $data = is_string($jobdata) ? json_decode($jobdata, true) : (array) $jobdata;
+        $class = strtoupper(trim((string) ($data['assignment_class'] ?? '')));
+        if ($class === 'STY' || $class === 'REG') {
+            return $class;
+        }
+        return !empty($data['template_name']) ? 'STY' : 'REG';
     }
 }
 
 /**
- * ILA/LOR follow the field template when one is applied (R-34).
- * No template = REG path: both required.
+ * REG: always required. STY: template / post-receipt send_ila (R-29).
  */
 if (!function_exists('workflow_requires_ila')) {
     function workflow_requires_ila($jobdata)
     {
-        $data = is_string($jobdata) ? json_decode($jobdata, true) : (array) $jobdata;
-        if (empty($data['template_name']) && !isset($data['send_ila'])) {
+        if (workflow_assignment_class($jobdata) === 'REG') {
             return true;
         }
-        if (isset($data['send_ila'])) {
-            return workflow_flag_on($data['send_ila']);
-        }
-        return true;
+        $data = is_string($jobdata) ? json_decode($jobdata, true) : (array) $jobdata;
+        return workflow_flag_on($data['send_ila'] ?? 0);
     }
 }
 
 if (!function_exists('workflow_requires_lor')) {
     function workflow_requires_lor($jobdata)
     {
-        $data = is_string($jobdata) ? json_decode($jobdata, true) : (array) $jobdata;
-        if (empty($data['template_name']) && !isset($data['send_lor'])) {
+        if (workflow_assignment_class($jobdata) === 'REG') {
             return true;
         }
-        if (isset($data['send_lor'])) {
-            return workflow_flag_on($data['send_lor']);
-        }
-        return true;
+        $data = is_string($jobdata) ? json_decode($jobdata, true) : (array) $jobdata;
+        return workflow_flag_on($data['send_lor'] ?? 0);
+    }
+}
+
+if (!function_exists('workflow_submission_tat_days')) {
+    function workflow_submission_tat_days($jobdata)
+    {
+        $CI =& get_instance();
+        $allowed = $CI->config->item('workflow_tat');
+        $allowedDays = isset($allowed['submission_days']) ? $allowed['submission_days'] : array(5, 15, 30);
+        $default = isset($allowed['submission_default']) ? (int) $allowed['submission_default'] : 15;
+        $data = is_string($jobdata) ? json_decode($jobdata, true) : (array) $jobdata;
+        $days = (int) ($data['submission_tat_days'] ?? $default);
+        return in_array($days, $allowedDays, true) ? $days : $default;
     }
 }

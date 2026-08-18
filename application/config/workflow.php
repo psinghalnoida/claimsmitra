@@ -13,7 +13,7 @@ $config['workflow_seats'] = array(
     '4' => 'accounts',
 );
 
-/** REG requires ILA+LOR; STY defaults off but may turn them on per job. See R-29. */
+/** REG: ILA+LOR always mandatory. STY: from field template or post-receipt mark. R-29. */
 $config['workflow_assignment_classes'] = array(
     'REG' => array(
         'label' => 'Regular',
@@ -131,3 +131,11 @@ $config['workflow_dispatch_to'] = array(
 
 /** R-33 dashboard reminder frequencies (days). */
 $config['workflow_lor_reminder_days'] = array(3, 7, 14, 30);
+
+/** R-36 TAT from acknowledgement. */
+$config['workflow_tat'] = array(
+    'lor_hours' => 24,
+    'ila_days' => 3,
+    'submission_days' => array(5, 15, 30),
+    'submission_default' => 15,
+);

@@ -195,28 +195,40 @@ Minimum snapshot:
 
 **Why:** “Cattle spot” is a product; Miscellaneous/Crop is the licence/desk. One string cannot drive templates, SLA, and supervisor books.
 
-### R-29 — REG and STY; both require media; STY may still need ILA/LOR
+### R-29 — REG and STY; both require media
 
 Every assignment is **REG** (regular) or **STY** (stereotype).
 
-- **Both** require photos and videos on the file (upload, WhatsApp, live survey, and/or inspection app).
-- **REG** (no field template, or a template that says send them) must go through **ILA** then **LOR** before the report.
-- **STY** is a **repeat** filled from a **field template**. **Whether ILA and LOR are sent is decided on that template** (not on the email-body template, not as a free flag on each job). If the template says skip, those stages are skipped; if it says send, they run like REG.
-- The **report** is the meeting point (online from a field template, or offline). The system must receive the report **along with** the media.
+- **Both** require photos and videos on the file.
+- **REG:** **ILA and LOR are mandatory.** The handler cannot skip them. This is how regular TAT is kept.
+- **STY:** a **repeat** (same insurer / insured / policy / place). ILA and LOR are **optional or mandatory according to the field template**. The handler may also **mark that after the assignment is received** if the template is silent or this file differs.
+- The **report** is the meeting point. The system must receive it **along with** the media.
 
-**Why:** Stereotype work is copy-forward. The template is the product recipe for that insurer/insured/place — including whether that recipe still needs a document chase.
+**Why:** REG files need a document chase on a clock. STY repeats must not be forced through ILA/LOR when the product does not use them — otherwise TAT is lost on copy-forward work.
 
 ### R-34 — Field templates copy repeating survey data
 
-A **field template** is a named snapshot of the survey form: insurer/broker offices, insured, policy, place of survey, nature of job, and the other fields the handler fills for that product. Save once from a filled report; call it on the next similar case.
+A **field template** is a named snapshot of the survey form: insurer/broker offices, insured, policy, place of survey, nature of job, **Send ILA / Send LOR**, and **submission TAT** (5 / 15 / 30 days).
 
-- Templates belong to the **handler** (saved against `userId`) and a **nature of job**.
-- Each template stores **Send ILA** and **Send LOR** (yes/no). Applying the template copies those decisions onto the job. Skip if the template says skip.
-- Distinct from **email body templates** (`claims_email`), which are letter wording only and do **not** control ILA/LOR.
+- Templates belong to the **handler** and a **nature of job**.
+- Applying a template copies those decisions onto the job. After receipt the handler may still change ILA/LOR/TAT for this file.
+- Distinct from **email body templates** (`claims_email`), which do **not** control ILA, LOR, or TAT.
 
-**Why:** STY exists because the same insurer keeps sending the same insured at the same yard. The recipe for that repeat includes whether ILA/LOR are part of the product.
+**Why:** The template is the product recipe for that repeat, including whether the chase and how many days to dispatch.
 
-**Why:** STY exists because the same insurer keeps sending the same insured at the same yard. Re-typing GSTIN, policy, and place is how files drift.
+### R-36 — TAT runs from acknowledgement to dispatch
+
+The job clock **starts when the acknowledgement is sent** (W-03a) and **ends at dispatch** (W-10).
+
+| Clock | When it applies | Default TAT |
+|---|---|---|
+| **LOR** | REG always; STY if template/job says send LOR | **24 hours** from acknowledgement |
+| **ILA** | REG always; STY if template/job says send ILA | **3 days** from acknowledgement |
+| **Submission** (report through dispatch) | Every job | **5, 15, or 30 days** from acknowledgement — set on the **template** or **marked after receipt** |
+
+Missing an ack date means the clocks have not started. LOR reminders (R-33) sit inside the 24-hour LOR TAT; they do not replace it.
+
+**Why:** Insurer letters quote these windows. Starting the clock at data entry (before ack) punishes the desk for mail delay; ending at report (before dispatch) pretends the file has left when it has not.
 
 ### R-35 — Acknowledge the assignment before field work
 
@@ -332,5 +344,6 @@ Existing tables (`claims_company` + profession flags, departments as a mixed LOB
 | 2026-08-18 | REG vs STY. Media required on both. ILA/LOR only on REG. Report is the join. | R-29. |
 | 2026-08-18 | STY may still require ILA/LOR per job. Field templates for repeat insurer/insured/policy/place. Ack email after entry; template selectable then. | R-29 amended. R-34, R-35. |
 | 2026-08-18 | ILA/LOR send-or-skip is stored on the field template (not the email template). | R-29, R-34. |
+| 2026-08-18 | REG: ILA+LOR always mandatory. STY: template or post-receipt mark. TAT: LOR 24h, ILA 3d, submission 5/15/30d, ack→dispatch. | R-29, R-36. |
 | 2026-08-18 | Dispatch modes + destination; await payment advice then chase or archive; retain file/media ≥ 3 years. | R-30–R-32. |
 | 2026-08-18 | LOR chase: paste appointment mail, To/Cc/Bcc, mark received, dashboard frequency reminders, subject = appointment + our ref. No silent auto-mail. | R-33. |

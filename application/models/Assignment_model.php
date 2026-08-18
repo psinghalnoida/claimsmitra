@@ -341,6 +341,20 @@ class Assignment_model extends CI_Model
     }
   }
 
+  public function mergeJobdataFields($aid, $fields)
+  {
+    $raw = $this->getjobdatabyAid($aid);
+    $data = json_decode($raw, true);
+    if (!is_array($data)) {
+      $data = array();
+    }
+    foreach ($fields as $key => $value) {
+      $data[$key] = $value;
+    }
+    $this->db->where('aid', $aid)->update('claims_livelocationjob', ['jobdata' => json_encode($data)]);
+    return $this->db->affected_rows() >= 0;
+  }
+
   public function getoutgoingjobdatabyAid($aid)
   {
     $this->db->select('jobdata');
@@ -907,7 +921,7 @@ class Assignment_model extends CI_Model
   public function gettemplateessentialdatabyAid($userid)
   {
     workflow_ensure_template_schema();
-    $this->db->select('id, case_reference, template_name, essentialdata, casedata, createdAt, send_ila, send_lor');
+    $this->db->select('id, case_reference, template_name, essentialdata, casedata, createdAt, send_ila, send_lor, submission_tat_days');
     $this->db->from('claims_templates');
     $this->db->where('userId', $userid);
     $this->db->order_by('createdAt', 'DESC'); // optional
