@@ -255,3 +255,4 @@ Existing tables (`claims_company` + profession flags, departments as a mixed LOB
 | Date | Decision | Effect |
 |---|---|---|
 | 2026-08-18 | Initial rules captured from product-owner working model (vendor CINs, assignment, survey org, billing). | R-01–R-28 adopted. |
+| 2026-08-18 | Job workflow W-01–W-12 adopted; incoming lists follow seats (R-17). | See `docs/WORKFLOW.md`. Vendor code persisted on bill save (R-23). |

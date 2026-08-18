@@ -52,22 +52,7 @@ class Dashboard_model extends CI_Model{
 
     // Define column names for searching
     $this->column_search = array('CJ.case_reference','CJ.aid','CTL.investigator_type');
-
-    // Status mapping for search
-    $status_map = [
-        'Under Survey' => 1,
-        'Photo Uploaded' => 2,
-        'LOR Sent' => 3, 
-        'FSR' => 4, 
-        'Billing' => 5,
-        'Waiting for TI' => 6,
-        'Pending for Dispatch' => 7,
-        'Dispatched' => 8,
-        'Partially Payment Received' => 9,
-        'Case Completed' => 10,
-        'Cancelled' => 11,
-
-    ];
+    $status_map = workflow_status_search_map();
 
     // Select required fields
     $this->db->select("CJ.id, CJ.case_reference, CJA.uid_from, CJA.departmentid, CJ.status, 
@@ -79,8 +64,8 @@ class Dashboard_model extends CI_Model{
     $this->db->join('claims_task_list as CTL', 'CTL.id = CJ.natureofjob', 'left');
     $this->db->where("CJA.departmentid", $departmentid);
     $this->db->where("CJA.cid_to", $companyid);
-    // print_r(json_encode($this->db->get()->result_array()));
-    // exit;
+    $userRole = $postData['user_role'] ?? ($postData['usertype'] ?? '');
+    workflow_apply_assignee_visibility('CJA', 'CJ', $userRole, (int) $this->session->userdata('id'));
     // Check if there is a search value
     if (isset($postData['search']['value']) && !empty($postData['search']['value'])) {
         $search_value = strtolower(trim($postData['search']['value']));
@@ -145,42 +130,48 @@ public function getOutgoinglivelocationjobs() {
 }
 
 // TOTAL INCOMING CASES
-public function getTotalIncomingCases($companyid, $deartmentid) {
-  $this->db->where('cid_to', $companyid);
-  $this->db->where('departmentid', $deartmentid);
-  return $this->db->count_all_results('claims_livelocationjob_assign');
+public function getTotalIncomingCases($companyid, $deartmentid, $userRole = null) {
+  $this->db->from('claims_livelocationjob_assign as clja');
+  $this->db->join('claims_livelocationjob as clj', 'clj.aid = clja.aid', 'LEFT');
+  $this->db->where('clja.cid_to', $companyid);
+  $this->db->where('clja.departmentid', $deartmentid);
+  workflow_apply_assignee_visibility('clja', 'clj', $userRole, (int) $this->session->userdata('id'));
+  return $this->db->count_all_results();
 }
 
 // TOTAL UNDERSURVEY CASES
-public function getTotalUnderSurveyCases($companyid, $departmentid) {
+public function getTotalUnderSurveyCases($companyid, $departmentid, $userRole = null) {
   $this->db->select('clj.aid, clj.case_reference, clja.uid_to');
   $this->db->from('claims_livelocationjob_assign as clja');
   $this->db->join('claims_livelocationjob as clj', 'clj.aid = clja.aid', 'LEFT');
   $this->db->where('clja.cid_to', $companyid);
   $this->db->where('clja.departmentid', $departmentid);
   $this->db->where('clj.status', 1);
+  workflow_apply_assignee_visibility('clja', 'clj', $userRole, (int) $this->session->userdata('id'));
   return $this->db->count_all_results();
 }
 
 // TOTAL BILLING DONE
-public function getTotalBillingDone($companyid, $departmentid) {
+public function getTotalBillingDone($companyid, $departmentid, $userRole = null) {
   $this->db->select('clj.aid, clj.case_reference, clja.uid_to');
   $this->db->from('claims_livelocationjob_assign as clja');
   $this->db->join('claims_livelocationjob as clj', 'clj.aid = clja.aid', 'LEFT');
   $this->db->where('clja.cid_to', $companyid);
   $this->db->where('clja.departmentid', $departmentid);
   $this->db->where('clj.status', 5);
+  workflow_apply_assignee_visibility('clja', 'clj', $userRole, (int) $this->session->userdata('id'));
   return $this->db->count_all_results();
 }
 
-// TOTAL BILLING DONE
-public function getTotalDispatchCases($companyid, $departmentid) {
+// TOTAL DISPATCH CASES
+public function getTotalDispatchCases($companyid, $departmentid, $userRole = null) {
   $this->db->select('clj.aid, clj.case_reference, clja.uid_to');
   $this->db->from('claims_livelocationjob_assign as clja');
   $this->db->join('claims_livelocationjob as clj', 'clj.aid = clja.aid', 'LEFT');
   $this->db->where('clja.cid_to', $companyid);
   $this->db->where('clja.departmentid', $departmentid);
   $this->db->where('clj.status', 8);
+  workflow_apply_assignee_visibility('clja', 'clj', $userRole, (int) $this->session->userdata('id'));
   return $this->db->count_all_results();
 }
 // NonLocation Incoming Cases
