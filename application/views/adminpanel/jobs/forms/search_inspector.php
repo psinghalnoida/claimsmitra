@@ -36,8 +36,14 @@
                             $templateName = htmlspecialchars($template['template_name'] ?? '');
                             $ila = !empty($template['send_ila']) ? 'ILA' : 'no ILA';
                             $lor = !empty($template['send_lor']) ? 'LOR' : 'no LOR';
+                            $tat = (int) ($template['submission_tat_days'] ?? 15);
                         ?>
-                        <option value="<?= $templateId ?>"><?= $templateName ?> (<?= $ila ?>, <?= $lor ?>)</option>
+                        <option value="<?= $templateId ?>"
+                            data-send-ila="<?= !empty($template['send_ila']) ? '1' : '0' ?>"
+                            data-send-lor="<?= !empty($template['send_lor']) ? '1' : '0' ?>"
+                            data-tat="<?= $tat ?>">
+                            <?= $templateName ?> (<?= $ila ?>, <?= $lor ?>, <?= $tat ?>d)
+                        </option>
                     <?php endforeach; ?>
                 <?php else : ?>
                     <option disabled>No templates found</option>
@@ -46,6 +52,56 @@
         </div>
     </div>
 </div>
+<div class="form-group row">
+    <span class="label-text col-lg-3 col-form-label">Assignment class</span>
+    <div class="col-lg-9">
+        <select class="form-control" name="assignment_class" id="assignment_class">
+            <option value="REG">REG — ILA and LOR mandatory</option>
+            <option value="STY">STY — ILA/LOR from template or mark below</option>
+        </select>
+    </div>
+</div>
+<div class="form-group row">
+    <span class="label-text col-lg-3 col-form-label">After receipt</span>
+    <div class="col-lg-3">
+        <select class="form-control" name="send_ila" id="job_send_ila">
+            <option value="1">ILA mandatory (3 days)</option>
+            <option value="0">ILA skip (STY only)</option>
+        </select>
+    </div>
+    <div class="col-lg-3">
+        <select class="form-control" name="send_lor" id="job_send_lor">
+            <option value="1">LOR mandatory (24 hours)</option>
+            <option value="0">LOR skip (STY only)</option>
+        </select>
+    </div>
+    <div class="col-lg-3">
+        <select class="form-control" name="submission_tat_days" id="job_submission_tat">
+            <option value="5">5 days to dispatch</option>
+            <option value="15" selected>15 days to dispatch</option>
+            <option value="30">30 days to dispatch</option>
+        </select>
+    </div>
+</div>
+<script>
+$(function() {
+    $('#template_name').on('change', function() {
+        var opt = $(this).find('option:selected');
+        if (!$(this).val()) {
+            $('#assignment_class').val('REG');
+            $('#job_send_ila').val('1');
+            $('#job_send_lor').val('1');
+            return;
+        }
+        $('#assignment_class').val('STY');
+        $('#job_send_ila').val(opt.data('send-ila'));
+        $('#job_send_lor').val(opt.data('send-lor'));
+        if (opt.data('tat')) {
+            $('#job_submission_tat').val(String(opt.data('tat')));
+        }
+    });
+});
+</script>
 
 
 <!-- Instruction -->

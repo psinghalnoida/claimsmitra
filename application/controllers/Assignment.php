@@ -2158,12 +2158,30 @@ class Assignment extends CI_Controller
                     if ($tpl) {
                         $jobdata['send_ila'] = !empty($tpl['send_ila']) ? '1' : '0';
                         $jobdata['send_lor'] = !empty($tpl['send_lor']) ? '1' : '0';
+                        $jobdata['submission_tat_days'] = (int) ($tpl['submission_tat_days'] ?? 15);
                         $jobdata['assignment_class'] = 'STY';
                     }
                 } else {
                     $jobdata['send_ila'] = '1';
                     $jobdata['send_lor'] = '1';
+                    $jobdata['submission_tat_days'] = 15;
                     $jobdata['assignment_class'] = 'REG';
+                }
+                if (!empty($case_data['assignment_class'])) {
+                    $jobdata['assignment_class'] = strtoupper($case_data['assignment_class']) === 'STY' ? 'STY' : 'REG';
+                }
+                if (isset($case_data['send_ila']) && $case_data['send_ila'] !== '') {
+                    $jobdata['send_ila'] = workflow_flag_on($case_data['send_ila']) ? '1' : '0';
+                }
+                if (isset($case_data['send_lor']) && $case_data['send_lor'] !== '') {
+                    $jobdata['send_lor'] = workflow_flag_on($case_data['send_lor']) ? '1' : '0';
+                }
+                if (!empty($case_data['submission_tat_days'])) {
+                    $jobdata['submission_tat_days'] = workflow_submission_tat_days(array('submission_tat_days' => $case_data['submission_tat_days']));
+                }
+                if ($jobdata['assignment_class'] === 'REG') {
+                    $jobdata['send_ila'] = '1';
+                    $jobdata['send_lor'] = '1';
                 }
 
                 // Prepare data for database insertion
@@ -2687,6 +2705,34 @@ class Assignment extends CI_Controller
         lor_ensure_schema();
         $this->assignment->upsertLorParties($aid, $parties);
         echo json_encode(['status' => 'success', 'parties' => $this->assignment->getLorParties($aid)]);
+    }
+
+    public function save_job_workflow_flags()
+    {
+        if ($this->session->userdata('id') == null) {
+            echo json_encode(['status' => 'error', 'message' => 'Not logged in']);
+            return;
+        }
+        $aid = $this->input->post('aid');
+        if (!$aid) {
+            echo json_encode(['status' => 'error', 'message' => 'Missing job']);
+            return;
+        }
+        $class = strtoupper((string) $this->input->post('assignment_class')) === 'STY' ? 'STY' : 'REG';
+        $sendIla = workflow_flag_on($this->input->post('send_ila')) ? '1' : '0';
+        $sendLor = workflow_flag_on($this->input->post('send_lor')) ? '1' : '0';
+        if ($class === 'REG') {
+            $sendIla = '1';
+            $sendLor = '1';
+        }
+        $tat = workflow_submission_tat_days(array('submission_tat_days' => $this->input->post('submission_tat_days')));
+        $ok = $this->assignment->mergeJobdataFields($aid, array(
+            'assignment_class' => $class,
+            'send_ila' => $sendIla,
+            'send_lor' => $sendLor,
+            'submission_tat_days' => $tat,
+        ));
+        echo json_encode(['status' => $ok ? 'success' : 'error', 'assignment_class' => $class, 'send_ila' => $sendIla, 'send_lor' => $sendLor, 'submission_tat_days' => $tat]);
     }
 
     public function mark_lor_received()
@@ -4512,6 +4558,10 @@ class Assignment extends CI_Controller
 
         $sendIla = workflow_flag_on($essential['send_ila'] ?? 0) ? 1 : 0;
         $sendLor = workflow_flag_on($essential['send_lor'] ?? 0) ? 1 : 0;
+        $tatDays = (int) ($essential['submission_tat_days'] ?? 15);
+        if (!in_array($tatDays, array(5, 15, 30), true)) {
+            $tatDays = 15;
+        }
         workflow_ensure_template_schema();
 
         if (!empty($essential['id'])) {
@@ -4523,6 +4573,7 @@ class Assignment extends CI_Controller
                 'template_name' => $essential['template_name'] ?? '',
                 'send_ila' => $sendIla,
                 'send_lor' => $sendLor,
+                'submission_tat_days' => $tatDays,
             ];
             $is_saved = $this->assignment->updateEssentialDatatemplate($updateData, $essential['id']);
             $recordId = $essential['id'];
@@ -4537,6 +4588,7 @@ class Assignment extends CI_Controller
                 'casedata' => $caseJson,
                 'send_ila' => $sendIla,
                 'send_lor' => $sendLor,
+                'submission_tat_days' => $tatDays,
                 'createdAt' => date('Y-m-d H:i:s')
             ];
 

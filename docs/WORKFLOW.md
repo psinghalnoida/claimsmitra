@@ -27,12 +27,12 @@ Every case is marked **REG** (regular) or **STY** (stereotype) when it is entere
 
 | Class | Media | ILA | LOR | Field template |
 |---|---|---|---|---|
-| **REG** (no field template) | Required | Required | Required | — |
-| **STY** (job uses a field template) | Required | **As the template says** | **As the template says** | Required (R-34) |
+| **REG** | Required | **Mandatory** | **Mandatory** | Optional |
+| **STY** | Required | Optional or mandatory per **template**, or marked after receipt | Same | Usual |
 
-Report is the **meeting point**. It may be prepared online (from the template / forms) or offline; the system must still receive the report **together with** photos and videos.
+**TAT (R-36):** clocks start at **acknowledgement** and end at **dispatch**. LOR **24 hours**. ILA **3 days**. Whole file **5 / 15 / 30 days** (template or after receipt).
 
-**Rules:** R-29, R-34, R-35.
+**Rules:** R-29, R-34, R-35, R-36.
 
 ---
 
@@ -42,7 +42,10 @@ Report is the **meeting point**. It may be prepared online (from the template / 
 W-01 Appoint  →  W-02 Land on desk  →  W-03 Handler owns file
       →  W-03a Acknowledge assignment (prepared email + optional field template)
       →  W-04 Field + media (both REG and STY)
-      →  W-05 ILA then W-06 LOR  — required unless the **field template** says skip
+      →  W-05 ILA then W-06 LOR  — mandatory on REG; on STY only if template or post-receipt mark says send
+      →  W-07 Report
+      →  W-08 Bill + TI
+      →  W-10 Dispatch — **TAT ends here** (started at W-03a ack)
       →  W-07 Report (meeting point) — online from template/forms or offline, with media on the file
       →  W-08 Bill (pay office) + TI
       →  W-10 Dispatch (portal / email / post / handover) — recorded, to pay office and/or other office
@@ -89,7 +92,7 @@ Cancel may happen from W-03 onward → status **Cancelled (11)**. Appointment tr
 ### W-03a — Acknowledge the appointment
 
 **Who:** Handler.  
-**What:** Small form: nature of assignment, mail subject, To/Cc. The system **prepares** the acknowledgement (“we have the assignment; quote our ref”). Handler checks and sends. **At this step they may select a field template** (R-34) so the repeat insurer/insured/policy/place fields load before survey.
+**What:** Small form: nature of assignment, mail subject, To/Cc. Prepared acknowledgement. Handler checks and sends. **This send starts TAT (R-36).** Select field template here, or mark REG/STY, ILA/LOR, and 5/15/30-day submission TAT **after receipt**.
 
 **As built today:** Case sidebar **Email** (`/prepareemail`) is a generic Summernote mailer with **email-body** templates (`claims_email`) and dummy To/Cc. Static copy of the ack lives in `preview.php`. **Field templates** (`claims_templates`) are created under `/createtemplate` and optionally chosen on the new-case form (`template_name`). They are **not** yet one screen with the ack.
 
@@ -106,17 +109,17 @@ Cancel may happen from W-03 onward → status **Cancelled (11)**. Appointment tr
 
 ---
 
-### W-05 — ILA (status **2**) — **REG only**
+### W-05 — ILA (status **2**)
 
-Immediate Loss Advice. **Mandatory** unless the job’s **field template** says skip ILA.  
+Immediate Loss Advice. **Mandatory on REG.** On **STY**, only if the template or the post-receipt mark says send. **TAT: 3 days from acknowledgement.**  
 **Code status:** `2`.  
 **Rules:** R-29.
 
 ---
 
-### W-06 — LOR (status **3**) — **REG only**
+### W-06 — LOR (status **3**)
 
-Letter of Requirement: a living checklist of documents asked from the insured / insurer. **Mandatory after ILA** unless the job’s **field template** says skip LOR.
+Letter of Requirement. **Mandatory on REG after ILA.** On **STY**, only if the template or post-receipt mark says send. **TAT: 24 hours from acknowledgement.**
 
 **Job status:** `claims_livelocationjob.status = 3` after the first send (do not move the job backwards if it is already at report or later).  
 **Letter row:** `claims_sendlor` — draft until sent; `next_due_on` drives the dashboard nag.  
@@ -128,16 +131,16 @@ Letter of Requirement: a living checklist of documents asked from the insured / 
 ```mermaid
 flowchart TD
   W04[W-04 Field + media]
-  class{Field template says send ILA/LOR?}
+  class{REG, or STY with ILA/LOR on?}
   ILA[W-05 ILA]
   LOR[W-06 LOR chase]
   RPT[W-07 Report — meeting point]
 
   W04 --> class
-  class -->|yes, or no template| ILA
+  class -->|REG, or STY send=yes| ILA
   ILA --> LOR
   LOR --> RPT
-  class -->|template says skip| RPT
+  class -->|STY send=no| RPT
 ```
 
 #### LOR chase (review, then send)
@@ -218,9 +221,9 @@ TI number and date make the bill issued. Job is then **pending dispatch**.
 | Online portal | 3 | Portal / reference |
 | Email | 4 | Address sent to |
 
-**To:** paying office and/or other concerned office. Multiple dispatches allowed. Then **await payment advice** — dispatched is not closed.  
+**To:** paying office and/or other concerned office. Multiple dispatches allowed. Then **await payment advice** — dispatched is not closed. **Submission TAT ends at this dispatch** (started at acknowledgement).  
 **Code status:** `8`.  
-**Rules:** R-30, R-31.
+**Rules:** R-30, R-31, R-36.
 
 ---
 
@@ -255,8 +258,8 @@ Until a distinct “supervisor” usertype exists, **usertype 2** is the supervi
 
 ## What this workflow does not do yet
 
-- Persist **REG/STY** from whether a field template is applied, and honour that template’s Send ILA / Send LOR flags (R-29, R-34).
-- Join acknowledgement mail + field-template pick into one W-03a screen (R-34, R-35). Today they are separate: `/prepareemail` vs `/createtemplate` / new-case `Select Template`.
+- Start TAT clocks at real acknowledgement send (R-36). Until then, store 5/15/30-day submission TAT and ILA/LOR marks from template or after receipt.
+- Join acknowledgement mail + field-template pick into one W-03a screen.
 - Distinct supervisor usertype vs admin (R-15 full tree).
 - Survey branch (GST) in the session switcher (still company + department).
 - Native foreign-currency invoices (R-26); USD/NPR remain a later change.
@@ -274,6 +277,7 @@ Until a distinct “supervisor” usertype exists, **usertype 2** is the supervi
 | 2026-08-18 | REG vs STY. Both require media. REG requires ILA then LOR. STY skips those two and goes to report. Report is the meeting point. | R-29. W-04–W-07 amended. |
 | 2026-08-18 | STY may still need ILA/LOR. Ack after entry. Field templates for repeats. | R-29, R-34, R-35. W-03a. |
 | 2026-08-18 | Send ILA / Send LOR decided on the field template. | R-34. |
+| 2026-08-18 | REG: ILA+LOR always mandatory. STY: template or after receipt. TAT ack→dispatch; LOR 24h; ILA 3d; file 5/15/30d. | R-36. |
 | 2026-08-18 | After bill: record dispatch (portal/email/post/handover, to pay or other office); await payment advice; chase balance or archive; retain ≥ 3 years. | R-30–R-32. W-10–W-12 amended. |
 | 2026-08-18 | Document LOR letter flow as built vs job stage W-06. | W-06 diagrams. |
 | 2026-08-18 | LOR chase: paste appointment mail, received/pending, frequency dashboard nag, subject + our ref. | R-33. W-06. |
