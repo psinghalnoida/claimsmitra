@@ -25,8 +25,8 @@ $config['workflow_assignment_classes'] = array(
     'STY' => array(
         'label' => 'Stereotype',
         'requires_media' => true,
-        'requires_ila' => 'optional',
-        'requires_lor' => 'optional',
+        'requires_ila' => 'from_field_template',
+        'requires_lor' => 'from_field_template',
         'uses_field_template' => true,
     ),
 );

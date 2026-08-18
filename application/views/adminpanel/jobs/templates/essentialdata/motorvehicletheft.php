@@ -15,6 +15,7 @@
                     </div>
                 </div>
             </div>
+            <?php $this->load->view('adminpanel/jobs/templates/include/ila_lor_flags'); ?>
             <?php $this->load->view("adminpanel/jobs/include/vendor") ?>
             <div class="row">
                 <input type="hidden" name="natureofjob" value="<?php echo $natureofjob; ?>">

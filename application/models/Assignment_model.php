@@ -897,9 +897,17 @@ class Assignment_model extends CI_Model
       return false;
     }
   }
+  public function getTemplateById($id)
+  {
+    workflow_ensure_template_schema();
+    $query = $this->db->get_where('claims_templates', ['id' => $id]);
+    return $query->row_array();
+  }
+
   public function gettemplateessentialdatabyAid($userid)
   {
-    $this->db->select('id, case_reference, template_name, essentialdata, casedata, createdAt');
+    workflow_ensure_template_schema();
+    $this->db->select('id, case_reference, template_name, essentialdata, casedata, createdAt, send_ila, send_lor');
     $this->db->from('claims_templates');
     $this->db->where('userId', $userid);
     $this->db->order_by('createdAt', 'DESC'); // optional
