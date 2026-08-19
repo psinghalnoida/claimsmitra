@@ -10,7 +10,7 @@
   "terminals": [
     {
       "name": "web",
-      "command": "CI_ENV=production php -S 0.0.0.0:8080 -t /workspace /workspace/.cursor/scripts/router.php"
+      "command": "source /workspace/.cursor/db.env 2>/dev/null; CI_ENV=production php -S 0.0.0.0:8080 -t /workspace /workspace/.cursor/scripts/router.php"
     }
   ],
   "ports": [

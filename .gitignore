@@ -49,3 +49,6 @@ Thumbs.db
 *.wmv
 
 *.zip
+
+# Generated local dev DB credentials (never commit secrets)
+.cursor/db.env
