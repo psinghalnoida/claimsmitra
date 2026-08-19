@@ -90,7 +90,7 @@ $autoload['helper'] = array('format_date');
 |
 |	$autoload['helper'] = array('url', 'file');
 */
-$autoload['helper'] = array('url', 'file','form', 'security','html','jwt_helper');
+$autoload['helper'] = array('url', 'file','form', 'security','html','jwt_helper', 'workflow_helper', 'lor_helper');
 
 /*
 | -------------------------------------------------------------------
@@ -104,7 +104,7 @@ $autoload['helper'] = array('url', 'file','form', 'security','html','jwt_helper'
 | config files.  Otherwise, leave it blank.
 |
 */
-$autoload['config'] = array();
+$autoload['config'] = array('workflow');
 
 /*
 | -------------------------------------------------------------------

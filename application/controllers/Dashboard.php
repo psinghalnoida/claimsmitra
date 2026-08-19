@@ -6,6 +6,7 @@ class Dashboard extends CI_Controller{
     $this->load->library('form_validation');
     $this->load->model('dashboard_model');
     $this->load->model('company_model','company');
+    $this->load->model('assignment_model', 'assignment');
     $this->data = array();
   }
 
@@ -75,6 +76,7 @@ class Dashboard extends CI_Controller{
                                       'color' => '#e74c3c'];
               }
               $user_id = $this->session->userdata('id');
+              $lor_due = $this->assignment->getLorDueJobs($defaultcompany, $defaultdepartment, $usertype, $user_id);
               // $companies = $this->company->getCompaniesByUserId($user_id);
               $data = [
                 'defaultcompany' => $defaultcompany,
@@ -87,6 +89,8 @@ class Dashboard extends CI_Controller{
                 'total_dispatch_cases' => $total_dispatch_cases,
                 'outgoing_livelocation_cases' => $this->dashboard_model->getOutgoinglivelocationjobs(),
                 'favcontact' => $this->dashboard_model->allUser(),
+                'lor_due' => $lor_due,
+                'data_param' => $encrypted_json,
                 // 'companies' =>  $companies,
                 'view' => "Dashboard",
               ];
@@ -108,19 +112,19 @@ class Dashboard extends CI_Controller{
     }
 
     private function getTotalIncomingCases($companyid, $departmentid, $user = null){
-      return $this->dashboard_model->getTotalIncomingCases($companyid, $departmentid);
+      return $this->dashboard_model->getTotalIncomingCases($companyid, $departmentid, $user);
     }
 
     private function getTotalUnderSurveyCases($companyid, $departmentid, $user = null){
-      return $this->dashboard_model->getTotalUnderSurveyCases($companyid, $departmentid);
+      return $this->dashboard_model->getTotalUnderSurveyCases($companyid, $departmentid, $user);
     }
 
     private function getTotalBillingDone($companyid, $departmentid, $user = null){
-      return $this->dashboard_model->getTotalBillingDone($companyid, $departmentid);
+      return $this->dashboard_model->getTotalBillingDone($companyid, $departmentid, $user);
     }
 
     private function getTotalDispatchCases($companyid, $departmentid, $user = null){
-      return $this->dashboard_model->getTotalDispatchCases($companyid, $departmentid);
+      return $this->dashboard_model->getTotalDispatchCases($companyid, $departmentid, $user);
     }    
 
     public function getJobs(){
@@ -144,31 +148,9 @@ class Dashboard extends CI_Controller{
       foreach ($jobData as $jobValue) {
           $insureddata = json_decode($jobValue->jobdata);
           $i++;
-          $case_status = null;
+          $case_status = workflow_status_badge_html($jobValue->status);
           $address = null;
-          if ($jobValue->status == 1) {
-              $case_status = '<span class="label label-info">Under Survey</span>';
-          } else if ($jobValue->status == 2) {
-              $case_status = '<span class="label label-success">Photo Upload</span>';
-          } else if ($jobValue->status == 3) {
-              $case_status = '<span class="label label-success">LOR Sent</span>';
-          } else if ($jobValue->status == 4) {
-              $case_status = '<span class="label label-success">FSR</span>';
-          }
-          else if ($jobValue->status == 5) {
-              $case_status = '<span class="label label-success">Bill Generated</span>';
-          }
-          else if ($jobValue->status == 6) {
-              $case_status = '<span class="label label-warning">Waiting for TI</span>';
-          }
-          else if ($jobValue->status == 7) {
-              $case_status = '<span class="label label-warning">Pending for Dispatch</span>';
-          }
-          else if ($jobValue->status == 8) {
-              $case_status = '<span class="label label-success">Dispatched</span>';
-          }
-          else if ($jobValue->status == 11) {
-              $case_status = '<span class="label label-danger">Cancelled</span>';
+          if ($jobValue->status == 11) {
               $cancelReason = $this->assignment->getCancelReason($jobValue->aid);
           }
           if ($jobValue->uid_to != 0) {

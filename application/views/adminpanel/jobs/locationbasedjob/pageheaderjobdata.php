@@ -88,18 +88,57 @@
                             ); ?></td>
                         </tr>
                         <tr>
-                            <th>
-                                <?php
-                                if (isset($casedata->policyNumber)) echo 'Policy Number';
-                                elseif (isset($casedata->cause_loss)) echo 'Cause of Loss';
-                                else echo 'Tag Number';
-                                ?>
-                            </th>
+                            <th>Policy Number</th>
                             <td><?php echo htmlspecialchars($casedata->policyNumber ?? $casedata->cause_loss ?? 'NA'); ?></td>
                         </tr>
                     </table>
                 </div>
             </div>
+            <?php if (!empty($aid) && isset($casedata)) {
+                $wfClass = workflow_assignment_class($casedata);
+                $wfIla = workflow_requires_ila($casedata);
+                $wfLor = workflow_requires_lor($casedata);
+                $wfTat = workflow_submission_tat_days($casedata);
+            ?>
+            <form id="jobWorkflowFlags" class="mt-2">
+                <input type="hidden" name="aid" value="<?php echo htmlspecialchars($aid); ?>">
+                <div class="row">
+                    <div class="col-md-3">
+                        <label style="font-size:13px;">Class</label>
+                        <select name="assignment_class" class="form-control form-control-sm">
+                            <option value="REG" <?php echo $wfClass === 'REG' ? 'selected' : ''; ?>>REG — ILA/LOR mandatory</option>
+                            <option value="STY" <?php echo $wfClass === 'STY' ? 'selected' : ''; ?>>STY — template / mark</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label style="font-size:13px;">ILA (3 days from ack)</label>
+                        <select name="send_ila" class="form-control form-control-sm">
+                            <option value="1" <?php echo $wfIla ? 'selected' : ''; ?>>Mandatory</option>
+                            <option value="0" <?php echo !$wfIla ? 'selected' : ''; ?>>Skip (STY)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label style="font-size:13px;">LOR (24 hours from ack)</label>
+                        <select name="send_lor" class="form-control form-control-sm">
+                            <option value="1" <?php echo $wfLor ? 'selected' : ''; ?>>Mandatory</option>
+                            <option value="0" <?php echo !$wfLor ? 'selected' : ''; ?>>Skip (STY)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label style="font-size:13px;">TAT to dispatch</label>
+                        <div class="d-flex">
+                            <select name="submission_tat_days" class="form-control form-control-sm">
+                                <option value="5" <?php echo $wfTat === 5 ? 'selected' : ''; ?>>5 days</option>
+                                <option value="15" <?php echo $wfTat === 15 ? 'selected' : ''; ?>>15 days</option>
+                                <option value="30" <?php echo $wfTat === 30 ? 'selected' : ''; ?>>30 days</option>
+                            </select>
+                            <button type="button" class="btn btn-sm btn-info ml-1" id="saveWorkflowFlags">Save</button>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-muted mb-0 mt-1" style="font-size:12px;">Clock starts at acknowledgement. REG cannot skip ILA/LOR. STY follows template unless you mark here after receipt.</p>
+            </form>
+            <?php } ?>
         </div>
     </div>
 </div>
@@ -139,11 +178,28 @@
             if (!$dropdownToggler.is(event.target) && !$dropdownToggler.has(event.target).length &&
                 !$panelContent.is(event.target) && !$panelContent.has(event.target).length &&
                 !$collapsedContent.is(event.target) && !$collapsedContent.has(event.target).length) {
-                // Ensure collapsed content is shown and panel content is hidden
                 $collapsedContent.removeClass('hidden');
                 $panelContent.removeClass('open');
                 $chevronIcon.removeClass('fa-chevron-up').addClass('fa-chevron-down');
             }
+        });
+
+        $('#saveWorkflowFlags').on('click', function() {
+            $.ajax({
+                url: '<?php echo base_url('assignment/save_job_workflow_flags'); ?>',
+                type: 'POST',
+                dataType: 'json',
+                data: $('#jobWorkflowFlags').serialize(),
+                success: function(res) {
+                    if (res.status === 'success') {
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire({ icon: 'success', title: 'TAT and ILA/LOR saved', timer: 1500, showConfirmButton: false });
+                        } else {
+                            alert('Saved');
+                        }
+                    }
+                }
+            });
         });
     });
 </script>

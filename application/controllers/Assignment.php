@@ -45,26 +45,9 @@ class Assignment extends CI_Controller
                 foreach ($jobData as $jobValue) {
                     $insureddata = json_decode($jobValue->jobdata);
                     $i++;
-                    $case_status = null;
+                    $case_status = $this->getCaseStatusLabel($jobValue->status);
                     $address = null;
-                    if ($jobValue->status == 1) {
-                        $case_status = '<span class="label label-info">Under Survey</span>';
-                    } else if ($jobValue->status == 2) {
-                        $case_status = '<span class="label label-success">Photo Upload</span>';
-                    } else if ($jobValue->status == 3) {
-                        $case_status = '<span class="label label-success">LOR Sent</span>';
-                    } else if ($jobValue->status == 4) {
-                        $case_status = '<span class="label label-success">FSR</span>';
-                    } else if ($jobValue->status == 5) {
-                        $case_status = '<span class="label label-success">Bill Generated</span>';
-                    } else if ($jobValue->status == 6) {
-                        $case_status = '<span class="label label-warning">Waiting for TI</span>';
-                    } else if ($jobValue->status == 7) {
-                        $case_status = '<span class="label label-warning">Pending for Dispatch</span>';
-                    } else if ($jobValue->status == 8) {
-                        $case_status = '<span class="label label-success">Dispatched</span>';
-                    } else if ($jobValue->status == 11) {
-                        $case_status = '<span class="label label-danger">Cancelled</span>';
+                    if ($jobValue->status == 11) {
                         $cancelReason = $this->assignment->getCancelReason($jobValue->aid);
                     }
                     if ($jobValue->uid_to != 0) {
@@ -168,6 +151,8 @@ class Assignment extends CI_Controller
                             'defaultdepartment' => $defaultdepartment,
                             'usertype' => $usertype,
                             'view' => "Incoming case",
+                            'lor_due' => $this->assignment->getLorDueJobs($defaultcompany, $defaultdepartment, $usertype, $this->session->userdata('id')),
+                            'data_param' => $encrypted_json,
                         ];
                         $this->load->view("adminpanel/jobs/locationbasedjob/incomingcase", $data);
                     }
@@ -262,24 +247,7 @@ class Assignment extends CI_Controller
     // Helper: Get status label
     private function getCaseStatusLabel($status)
     {
-        $labels = [
-            1 => ['Under Survey', 'info'],
-            2 => ['Photo Upload', 'success'],
-            3 => ['LOR Sent', 'success'],
-            4 => ['FSR', 'success'],
-            5 => ['Bill Generated', 'success'],
-            6 => ['Waiting for TI', 'warning'],
-            7 => ['Pending for Dispatch', 'warning'],
-            8 => ['Dispatched', 'success'],
-            11 => ['Cancelled', 'danger'],
-        ];
-
-        if (isset($labels[$status])) {
-            [$label, $class] = $labels[$status];
-            return "<span class=\"label label-{$class}\">{$label}</span>";
-        }
-
-        return '<span class="label label-default">Unknown</span>';
+        return workflow_status_badge_html($status);
     }
 
     // Helper: Get user display
@@ -352,28 +320,9 @@ class Assignment extends CI_Controller
                 foreach ($jobData as $jobValue) {
                     $insureddata = json_decode($jobValue->jobdata);
                     $i++;
-                    $case_status = null;
-                    if ($jobValue->status == 1) {
-                        $case_status = '<span class="label label-info">Under Survey</span>';
-                    } else if ($jobValue->status == 2) {
-                        $case_status = '<span class="label label-success">Photo Upload</span>';
-                    } else if ($jobValue->status == 3) {
-                        $case_status = '<span class="label label-success">LOR Sent</span>';
-                    } else if ($jobValue->status == 4) {
-                        $case_status = '<span class="label label-success">FSR</span>';
-                    } else if ($jobValue->status == 5) {
-                        $case_status = '<span class="label label-success">Bill Generated</span>';
-                    } else if ($jobValue->status == 6) {
-                        $case_status = '<span class="label label-warning">Waiting for TI</span>';
-                    } else if ($jobValue->status == 7) {
-                        $case_status = '<span class="label label-warning">Pending for Dispatch</span>';
-                    } else if ($jobValue->status == 8) {
-                        $case_status = '<span class="label label-success">Dispatched</span>';
-                    } else if ($jobValue->status == 11) {
-                        $case_status = '<span class="label label-danger">Cancelled</span>';
+                    $case_status = $this->getCaseStatusLabel($jobValue->status);
+                    if ($jobValue->status == 11) {
                         $cancelReason = $this->assignment->getCancelReason($jobValue->aid);
-                    } else if ($jobValue->status == 10) {
-                        $case_status = '<span class="label label-success">Case Completed</span>';
                     }
                     if ($jobValue->uid_to != 0) {
                         $assignTo = $this->home->getuserdatabyid($jobValue->uid_to);
@@ -2203,6 +2152,38 @@ class Assignment extends CI_Controller
                     'asset_value' => $case_data['asset_value'] ?? null
                 ], fn($value) => !is_null($value) && $value !== '');
 
+                if (!empty($jobdata['template_name'])) {
+                    workflow_ensure_template_schema();
+                    $tpl = $this->assignment->getTemplateById($jobdata['template_name']);
+                    if ($tpl) {
+                        $jobdata['send_ila'] = !empty($tpl['send_ila']) ? '1' : '0';
+                        $jobdata['send_lor'] = !empty($tpl['send_lor']) ? '1' : '0';
+                        $jobdata['submission_tat_days'] = (int) ($tpl['submission_tat_days'] ?? 15);
+                        $jobdata['assignment_class'] = 'STY';
+                    }
+                } else {
+                    $jobdata['send_ila'] = '1';
+                    $jobdata['send_lor'] = '1';
+                    $jobdata['submission_tat_days'] = 15;
+                    $jobdata['assignment_class'] = 'REG';
+                }
+                if (!empty($case_data['assignment_class'])) {
+                    $jobdata['assignment_class'] = strtoupper($case_data['assignment_class']) === 'STY' ? 'STY' : 'REG';
+                }
+                if (isset($case_data['send_ila']) && $case_data['send_ila'] !== '') {
+                    $jobdata['send_ila'] = workflow_flag_on($case_data['send_ila']) ? '1' : '0';
+                }
+                if (isset($case_data['send_lor']) && $case_data['send_lor'] !== '') {
+                    $jobdata['send_lor'] = workflow_flag_on($case_data['send_lor']) ? '1' : '0';
+                }
+                if (!empty($case_data['submission_tat_days'])) {
+                    $jobdata['submission_tat_days'] = workflow_submission_tat_days(array('submission_tat_days' => $case_data['submission_tat_days']));
+                }
+                if ($jobdata['assignment_class'] === 'REG') {
+                    $jobdata['send_ila'] = '1';
+                    $jobdata['send_lor'] = '1';
+                }
+
                 // Prepare data for database insertion
                 $data = [
                     'aid' => date("dmyhis") . rand(10, 100),
@@ -2512,32 +2493,26 @@ class Assignment extends CI_Controller
                     $aid = $this->encryption->decrypt(base64_decode($this->input->get('q')));
 
                     // Get the LOR status
+                    lor_ensure_schema();
                     $lorStatus = $this->assignment->getSendlorStatus($aid);
-
-                    if ($lorStatus == 1) {
-                        // If status is 1, proceed to load the "View LOR" view
-                        $data = [
-                            'defaultcompany' => $defaultcompany,
-                            'defaultdepartment' => $defaultdepartment,
-                            'usertype' => $usertype,
-                            'lorStatus' => $lorStatus,
-                            'aid' => $aid,
-                            'view' => "View LOR",
-                        ];
-
-                        $this->load->view('adminpanel/accounts/viewlor', $data);
-                    } else {
-                        // If status is not 1, load the "Prepare LOR" view
-                        $data = [
-                            'defaultcompany' => $defaultcompany,
-                            'defaultdepartment' => $defaultdepartment,
-                            'usertype' => $usertype,
-                            'lorStatus' => $lorStatus,
-                            'aid' => $aid,
-                            'view' => "Prepare LOR",
-                        ];
-                        $this->load->view('adminpanel/accounts/viewlor', $data);
-                    }
+                    $job = $this->assignment->getCaseReferenceByAid($aid);
+                    $ourRef = !empty($job['case_reference']) ? $job['case_reference'] : $aid;
+                    $lorRow = $this->assignment->getSendlorRow($aid);
+                    $jobdata = json_decode($this->assignment->getjobdatabyAid($aid), true);
+                    $data = [
+                        'defaultcompany' => $defaultcompany,
+                        'defaultdepartment' => $defaultdepartment,
+                        'usertype' => $usertype,
+                        'lorStatus' => $lorStatus,
+                        'aid' => $aid,
+                        'view' => ($lorStatus == 1) ? 'View LOR' : 'Prepare LOR',
+                        'ourRef' => $ourRef,
+                        'lorRow' => $lorRow,
+                        'lorParties' => $this->assignment->getLorParties($aid),
+                        'lorReminderDays' => $this->config->item('workflow_lor_reminder_days'),
+                        'requiresLor' => workflow_requires_lor($jobdata),
+                    ];
+                    $this->load->view('adminpanel/accounts/viewlor', $data);
                 }
             }
         } else {
@@ -2684,42 +2659,177 @@ class Assignment extends CI_Controller
         }
     }
 
+    public function parse_appointment_mail()
+    {
+        if ($this->session->userdata('id') == null) {
+            echo json_encode(['status' => 'error', 'message' => 'Not logged in']);
+            return;
+        }
+        $aid = $this->input->post('aid');
+        $raw = $this->input->post('raw');
+        if (!$aid || trim((string) $raw) === '') {
+            echo json_encode(['status' => 'error', 'message' => 'Paste the appointment mail first']);
+            return;
+        }
+        lor_ensure_schema();
+        $parsed = lor_parse_appointment_mail($raw);
+        $job = $this->assignment->getCaseReferenceByAid($aid);
+        $ourRef = !empty($job['case_reference']) ? $job['case_reference'] : $aid;
+        $this->assignment->upsertLorParties($aid, $parsed['parties'], false);
+        $this->assignment->saveLorChaseMeta($aid, [
+            'appointment_subject' => $parsed['subject'],
+            'our_ref' => $ourRef,
+            'mail_subject' => lor_compose_subject($parsed['subject'], $ourRef),
+        ]);
+        echo json_encode([
+            'status' => 'success',
+            'subject' => $parsed['subject'],
+            'mail_subject' => lor_compose_subject($parsed['subject'], $ourRef),
+            'our_ref' => $ourRef,
+            'parties' => $this->assignment->getLorParties($aid),
+        ]);
+    }
+
+    public function save_lor_parties()
+    {
+        if ($this->session->userdata('id') == null) {
+            echo json_encode(['status' => 'error', 'message' => 'Not logged in']);
+            return;
+        }
+        $aid = $this->input->post('aid');
+        $parties = json_decode($this->input->post('parties'), true);
+        if (!$aid || !is_array($parties)) {
+            echo json_encode(['status' => 'error', 'message' => 'Invalid people list']);
+            return;
+        }
+        lor_ensure_schema();
+        $this->assignment->upsertLorParties($aid, $parties);
+        echo json_encode(['status' => 'success', 'parties' => $this->assignment->getLorParties($aid)]);
+    }
+
+    public function save_job_workflow_flags()
+    {
+        if ($this->session->userdata('id') == null) {
+            echo json_encode(['status' => 'error', 'message' => 'Not logged in']);
+            return;
+        }
+        $aid = $this->input->post('aid');
+        if (!$aid) {
+            echo json_encode(['status' => 'error', 'message' => 'Missing job']);
+            return;
+        }
+        $class = strtoupper((string) $this->input->post('assignment_class')) === 'STY' ? 'STY' : 'REG';
+        $sendIla = workflow_flag_on($this->input->post('send_ila')) ? '1' : '0';
+        $sendLor = workflow_flag_on($this->input->post('send_lor')) ? '1' : '0';
+        if ($class === 'REG') {
+            $sendIla = '1';
+            $sendLor = '1';
+        }
+        $tat = workflow_submission_tat_days(array('submission_tat_days' => $this->input->post('submission_tat_days')));
+        $ok = $this->assignment->mergeJobdataFields($aid, array(
+            'assignment_class' => $class,
+            'send_ila' => $sendIla,
+            'send_lor' => $sendLor,
+            'submission_tat_days' => $tat,
+        ));
+        echo json_encode(['status' => $ok ? 'success' : 'error', 'assignment_class' => $class, 'send_ila' => $sendIla, 'send_lor' => $sendLor, 'submission_tat_days' => $tat]);
+    }
+
+    public function mark_lor_received()
+    {
+        if ($this->session->userdata('id') == null) {
+            echo json_encode(['status' => 'error', 'message' => 'Not logged in']);
+            return;
+        }
+        $aid = $this->input->post('aid');
+        $questionId = $this->input->post('question_id');
+        $received = (int) $this->input->post('received');
+        if (!$aid || $questionId === null || $questionId === '') {
+            echo json_encode(['status' => 'error', 'message' => 'Invalid document']);
+            return;
+        }
+        $ok = $this->assignment->markLorReceived($aid, $questionId, $received);
+        $row = $this->assignment->getSendlorRow($aid);
+        echo json_encode([
+            'status' => $ok ? 'success' : 'error',
+            'pending' => $row ? lor_pending_descriptions($row['lor']) : [],
+        ]);
+    }
+
+    public function save_lor_reminder()
+    {
+        if ($this->session->userdata('id') == null) {
+            echo json_encode(['status' => 'error', 'message' => 'Not logged in']);
+            return;
+        }
+        lor_ensure_schema();
+        $aid = $this->input->post('aid');
+        $days = (int) $this->input->post('frequency_days');
+        if (!$aid || $days < 1) {
+            echo json_encode(['status' => 'error', 'message' => 'Choose a frequency']);
+            return;
+        }
+        $next = lor_next_due_date($days);
+        $this->assignment->saveLorChaseMeta($aid, [
+            'reminder_frequency_days' => $days,
+            'next_due_on' => $next,
+        ]);
+        echo json_encode(['status' => 'success', 'next_due_on' => $next, 'frequency_days' => $days]);
+    }
+
     public function submit_viewlor()
     {
         if ($this->session->userdata('id') != null) {
+            lor_ensure_schema();
             $aid = $this->input->post('aid');
             $sent_to = json_decode($this->input->post('sent_to'), true);
             $special_note = $this->input->post('special_note');
             $subject = $this->input->post('subject');
             $date_of_letter = $this->input->post('date_of_letter');
-            $automail_fix = json_decode($this->input->post('automail_fix'), true);
-            $sent_date = $this->input->post('sent_date');
-            $mail_automation = $this->input->post('mail_automation');
-            $questions = json_decode($this->input->post('questions'), true);
+            $frequencyDays = (int) $this->input->post('frequency_days');
+            $appointmentSubject = $this->input->post('appointment_subject');
             $email_body = $this->input->post('email_body');
 
+            $row = $this->assignment->getSendlorRow($aid);
+            $pending = $row ? lor_pending_descriptions($row['lor']) : [];
+            if (empty($pending)) {
+                echo json_encode(['status' => 'error', 'message' => 'No pending documents to send. Mark received items first, or add lines from the LOR Bank.']);
+                return;
+            }
+
             if ($aid && is_array($sent_to) && !empty($sent_to)) {
-                $data = [
+                $job = $this->assignment->getCaseReferenceByAid($aid);
+                $ourRef = !empty($job['case_reference']) ? $job['case_reference'] : $aid;
+                if ($appointmentSubject === null || $appointmentSubject === '') {
+                    $appointmentSubject = $row['appointment_subject'] ?? '';
+                }
+                $composedSubject = lor_compose_subject($subject ?: $appointmentSubject, $ourRef);
+                if ($frequencyDays < 1) {
+                    $frequencyDays = (int) ($row['reminder_frequency_days'] ?? 7);
+                }
+                if ($frequencyDays < 1) {
+                    $frequencyDays = 7;
+                }
+                $nextDue = lor_next_due_date($frequencyDays);
+                $updated = $this->assignment->saveLorChaseMeta($aid, [
                     'sent_to' => json_encode($sent_to),
                     'special_note' => $special_note,
-                    'mail_subject' => $subject,
+                    'mail_subject' => $composedSubject,
+                    'appointment_subject' => $appointmentSubject,
+                    'our_ref' => $ourRef,
                     'date_of_letter' => $date_of_letter,
-                    'automail_fix' => json_encode($automail_fix),
-                    'sent_date' => $sent_date,
-                    'mail_automation' => $mail_automation,
+                    'sent_date' => date('Y-m-d'),
                     'status' => 1,
-                ];
-
-                // Update LOR data
-                $updated = $this->assignment->updateLorQuestions($aid, $data);
+                    'reminder_frequency_days' => $frequencyDays,
+                    'next_due_on' => $nextDue,
+                ]);
 
                 if ($updated) {
-                    $attachmentPath = $this->generate_new_pdf($questions, $special_note, $aid);
-
-                    // If the PDF was successfully generated, send the email
+                    $attachmentPath = $this->generate_new_pdf($pending, $special_note, $aid);
                     if ($attachmentPath && file_exists($attachmentPath)) {
-                        $this->sendmail($sent_to, $attachmentPath, $email_body, $subject); // Send questions as the body
-                        echo json_encode(['status' => 'success']);
+                        $this->sendmail($sent_to, $attachmentPath, $email_body, $composedSubject);
+                        $this->assignment->markJobLorSent($aid);
+                        echo json_encode(['status' => 'success', 'subject' => $composedSubject, 'next_due_on' => $nextDue]);
                     } else {
                         echo json_encode(['status' => 'error', 'message' => 'Failed to generate PDF']);
                     }
@@ -2728,7 +2838,7 @@ class Assignment extends CI_Controller
                 }
             } else {
                 log_message('error', 'Invalid sent_to data: ' . json_encode($sent_to));
-                echo json_encode(['status' => 'error', 'message' => 'Invalid input data']);
+                echo json_encode(['status' => 'error', 'message' => 'Select at least one To / Cc / Bcc']);
             }
         } else {
             redirect('user_logout');
@@ -2832,30 +2942,46 @@ class Assignment extends CI_Controller
             $this->email->initialize($email_config);
             $sender_name = "VP Singhal & Co.";
             $formattedEmailBody = nl2br($emailBody);
+
+            // Send one message per recipient entry rather than batching every address into a
+            // single To/Cc header set — recipients here can belong to different organizations
+            // (e.g. an insurer contact and a broker contact), and a shared header would expose
+            // each recipient's email address to every other recipient.
+            $sentAny = false;
+            $seenTo = [];
             foreach ($recipients as $recipient) {
-                $to = $recipient['to'] ?? null;
-                $cc = $recipient['cc'] ?? null;
-
-                if ($to) {
-                    $this->email->from($config['username'], $sender_name);
-                    $this->email->to($to);
-
-                    if ($cc) {
-                        $this->email->cc($cc);
-                    }
-
-                    $this->email->subject($subject);
-                    $this->email->message($formattedEmailBody);
-
-                    // Attach the PDF if it exists
-                    if ($attachmentPath && file_exists($attachmentPath)) {
-                        $this->email->attach($attachmentPath);
-                    }
-
-                    if (!$this->email->send()) {
-                        echo $this->email->print_debugger();
-                    }
+                $to = !empty($recipient['to']) ? $recipient['to'] : null;
+                if (!$to && !empty($recipient['cc'])) {
+                    $to = $recipient['cc'];
                 }
+                if (!$to || isset($seenTo[$to])) {
+                    continue;
+                }
+                $seenTo[$to] = true;
+
+                $this->email->clear(true);
+                $this->email->from($config['username'], $sender_name);
+                $this->email->to($to);
+                if (!empty($recipient['cc']) && $recipient['cc'] !== $to) {
+                    $this->email->cc($recipient['cc']);
+                }
+                if (!empty($recipient['bcc'])) {
+                    $this->email->bcc($recipient['bcc']);
+                }
+                $this->email->subject($subject);
+                $this->email->message($formattedEmailBody);
+                if ($attachmentPath && file_exists($attachmentPath)) {
+                    $this->email->attach($attachmentPath);
+                }
+                if ($this->email->send()) {
+                    $sentAny = true;
+                } else {
+                    log_message('error', 'LOR sendmail failed for ' . $to . ': ' . $this->email->print_debugger(['headers']));
+                }
+            }
+
+            if (!$sentAny) {
+                log_message('error', 'LOR sendmail: no To address');
             }
         } else {
             log_message('error', 'Email configuration or recipient data is missing.');
@@ -4427,6 +4553,14 @@ class Assignment extends CI_Controller
         // Start DB transaction
         $this->db->trans_start();
 
+        $sendIla = workflow_flag_on($essential['send_ila'] ?? 0) ? 1 : 0;
+        $sendLor = workflow_flag_on($essential['send_lor'] ?? 0) ? 1 : 0;
+        $tatDays = (int) ($essential['submission_tat_days'] ?? 15);
+        if (!in_array($tatDays, array(5, 15, 30), true)) {
+            $tatDays = 15;
+        }
+        workflow_ensure_template_schema();
+
         if (!empty($essential['id'])) {
             // Update
             $updateData = [
@@ -4434,6 +4568,9 @@ class Assignment extends CI_Controller
                 'casedata' => $caseJson,
                 'natureofjob' => $essential['natureofjob'] ?? '',
                 'template_name' => $essential['template_name'] ?? '',
+                'send_ila' => $sendIla,
+                'send_lor' => $sendLor,
+                'submission_tat_days' => $tatDays,
             ];
             $is_saved = $this->assignment->updateEssentialDatatemplate($updateData, $essential['id']);
             $recordId = $essential['id'];
@@ -4446,6 +4583,9 @@ class Assignment extends CI_Controller
                 'natureofjob' => $essential['natureofjob'] ?? '',
                 'essentialdata' => $essentialJson,
                 'casedata' => $caseJson,
+                'send_ila' => $sendIla,
+                'send_lor' => $sendLor,
+                'submission_tat_days' => $tatDays,
                 'createdAt' => date('Y-m-d H:i:s')
             ];
 

@@ -10,6 +10,14 @@ class Assignment_model extends CI_Model
     date_default_timezone_set('Asia/Kolkata');
     $currentDateTime = now();
     $this->formattedDateTime = date('d-m-Y H:i:s', $currentDateTime);
+    $this->load->helper('workflow_helper');
+  }
+
+  private function assigneeVisibilityFromPost($postData, $assignAlias = 'CJA', $jobAlias = 'CJ')
+  {
+    $userRole = $postData['user_role'] ?? ($postData['usertype'] ?? '');
+    $userid = (int) $this->session->userdata('id');
+    workflow_apply_assignee_visibility($assignAlias, $jobAlias, $userRole, $userid);
   }
 
   public function getAdditionalDataByaid($aid)
@@ -295,7 +303,7 @@ class Assignment_model extends CI_Model
   private function getTemplateFieldById($templateid, $field)
   {
     $this->db->select($field);
-    $this->db->from('template_name');
+    $this->db->from('claims_templates');
     $this->db->where('id', $templateid);
     $query = $this->db->get();
     if ($query->num_rows() > 0) {
@@ -331,6 +339,20 @@ class Assignment_model extends CI_Model
     } else {
       return false;
     }
+  }
+
+  public function mergeJobdataFields($aid, $fields)
+  {
+    $raw = $this->getjobdatabyAid($aid);
+    $data = json_decode($raw, true);
+    if (!is_array($data)) {
+      $data = array();
+    }
+    foreach ($fields as $key => $value) {
+      $data[$key] = $value;
+    }
+    $this->db->where('aid', $aid)->update('claims_livelocationjob', ['jobdata' => json_encode($data)]);
+    return $this->db->affected_rows() >= 0;
   }
 
   public function getoutgoingjobdatabyAid($aid)
@@ -686,6 +708,157 @@ class Assignment_model extends CI_Model
     }
     return [];
   }
+
+  public function getSendlorRow($aid)
+  {
+    $query = $this->db->get_where('claims_sendlor', ['aid' => $aid]);
+    return $query->row_array();
+  }
+
+  public function getCaseReferenceByAid($aid)
+  {
+    $query = $this->db->select('case_reference, status')
+      ->from('claims_livelocationjob')
+      ->where('aid', $aid)
+      ->get();
+    return $query->row_array();
+  }
+
+  public function getLorParties($aid)
+  {
+    if (!$this->db->table_exists('claims_lor_party')) {
+      return [];
+    }
+    return $this->db->order_by('id', 'asc')->get_where('claims_lor_party', ['aid' => $aid])->result_array();
+  }
+
+  public function upsertLorParties($aid, $parties, $overwriteSendAs = true)
+  {
+    if (!is_array($parties)) {
+      return false;
+    }
+    foreach ($parties as $p) {
+      $email = strtolower(trim($p['email'] ?? ''));
+      if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        continue;
+      }
+      $sendAs = $p['send_as'] ?? 'cc';
+      if (!in_array($sendAs, ['to', 'cc', 'bcc', 'none'], true)) {
+        $sendAs = 'cc';
+      }
+      $row = [
+        'aid' => $aid,
+        'name' => $p['name'] ?? '',
+        'email' => $email,
+        'header_kind' => $p['header_kind'] ?? 'unknown',
+        'source' => $p['source'] ?? 'paste',
+      ];
+      if ($overwriteSendAs) {
+        $row['send_as'] = $sendAs;
+      }
+      $existing = $this->db->get_where('claims_lor_party', ['aid' => $aid, 'email' => $email])->row();
+      if ($existing) {
+        $this->db->where('id', $existing->id)->update('claims_lor_party', $row);
+      } else {
+        $row['send_as'] = $sendAs;
+        $this->db->insert('claims_lor_party', $row);
+      }
+    }
+    return true;
+  }
+
+  public function markLorReceived($aid, $questionId, $received)
+  {
+    $row = $this->getSendlorRow($aid);
+    if (!$row) {
+      return false;
+    }
+    $lorArray = json_decode($row['lor'], true);
+    if (!is_array($lorArray)) {
+      return false;
+    }
+    foreach ($lorArray as $key => $item) {
+      if (isset($item['id']) && (string) $item['id'] === (string) $questionId) {
+        $lorArray[$key]['received'] = $received ? 1 : 0;
+        $lorArray[$key]['received_at'] = $received ? date('Y-m-d H:i:s') : null;
+        break;
+      }
+    }
+    $this->db->where('aid', $aid)->update('claims_sendlor', ['lor' => json_encode(array_values($lorArray))]);
+    return true;
+  }
+
+  public function saveLorChaseMeta($aid, $data)
+  {
+    $row = $this->getSendlorRow($aid);
+    $payload = [];
+    foreach (['appointment_subject', 'our_ref', 'reminder_frequency_days', 'next_due_on', 'mail_subject', 'sent_to', 'special_note', 'date_of_letter', 'sent_date', 'status', 'lor'] as $key) {
+      if (array_key_exists($key, $data)) {
+        $payload[$key] = $data[$key];
+      }
+    }
+    if (empty($payload)) {
+      return false;
+    }
+    if ($row) {
+      $this->db->where('aid', $aid)->update('claims_sendlor', $payload);
+    } else {
+      $payload['aid'] = $aid;
+      $payload['uid'] = (int) $this->session->userdata('id');
+      if (!isset($payload['lor'])) {
+        $payload['lor'] = '[]';
+      }
+      $this->db->insert('claims_sendlor', $payload);
+    }
+    return true;
+  }
+
+  public function markJobLorSent($aid)
+  {
+    $job = $this->getCaseReferenceByAid($aid);
+    if (!$job) {
+      return false;
+    }
+    $status = (int) $job['status'];
+    if ($status > 0 && $status < 3) {
+      $this->db->where('aid', $aid)->update('claims_livelocationjob', ['status' => 3]);
+    }
+    return true;
+  }
+
+  public function getLorDueJobs($companyid, $departmentid, $userRole, $userId)
+  {
+    lor_ensure_schema();
+    if (!$this->db->field_exists('next_due_on', 'claims_sendlor')) {
+      return [];
+    }
+    $this->db->select('SL.aid, SL.next_due_on, SL.reminder_frequency_days, SL.appointment_subject, SL.lor, SL.our_ref, CJ.case_reference, CJ.status, CJA.uid_to');
+    $this->db->from('claims_sendlor as SL');
+    $this->db->join('claims_livelocationjob as CJ', 'CJ.aid = SL.aid', 'inner');
+    $this->db->join('claims_livelocationjob_assign as CJA', 'CJA.aid = SL.aid', 'left');
+    $this->db->where('SL.next_due_on IS NOT NULL', null, false);
+    $this->db->where('SL.next_due_on <=', date('Y-m-d'));
+    $this->db->where_not_in('CJ.status', [10, 11]);
+    if ($companyid) {
+      $this->db->where('CJA.cid_to', $companyid);
+    }
+    if ($departmentid) {
+      $this->db->where('CJA.departmentid', $departmentid);
+    }
+    workflow_apply_assignee_visibility('CJA', 'CJ', $userRole, (int) $userId);
+    $this->db->order_by('SL.next_due_on', 'asc');
+    $rows = $this->db->get()->result_array();
+    $due = [];
+    foreach ($rows as $row) {
+      $pending = lor_count_pending($row['lor']);
+      if ($pending < 1) {
+        continue;
+      }
+      $row['pending_count'] = $pending;
+      $due[] = $row;
+    }
+    return $due;
+  }
   // LOR SECTION END
 
   public function getessentialdatabyAid($aid)
@@ -738,9 +911,17 @@ class Assignment_model extends CI_Model
       return false;
     }
   }
+  public function getTemplateById($id)
+  {
+    workflow_ensure_template_schema();
+    $query = $this->db->get_where('claims_templates', ['id' => $id]);
+    return $query->row_array();
+  }
+
   public function gettemplateessentialdatabyAid($userid)
   {
-    $this->db->select('id, case_reference, template_name, essentialdata, casedata, createdAt');
+    workflow_ensure_template_schema();
+    $this->db->select('id, case_reference, template_name, essentialdata, casedata, createdAt, send_ila, send_lor, submission_tat_days');
     $this->db->from('claims_templates');
     $this->db->where('userId', $userid);
     $this->db->order_by('createdAt', 'DESC'); // optional
@@ -862,26 +1043,10 @@ class Assignment_model extends CI_Model
   {
     $departmentid = $postData['department'];
     $companyid = $postData['company'];
-    $userid = $this->session->userdata('id');
 
     // Define column names for searching
     $this->column_search = array('CJ.case_reference', 'CJ.aid', 'CTL.investigator_type');
-
-    // Status mapping for search
-    $status_map = [
-      'Under Survey' => 1,
-      'Photo Uploaded' => 2,
-      'LOR Sent' => 3,
-      'FSR' => 4,
-      'Billing' => 5,
-      'Waiting for TI' => 6,
-      'Pending for Dispatch' => 7,
-      'Dispatched' => 8,
-      'Partially Payment Received' => 9,
-      'Case Completed' => 10,
-      'Cancelled' => 11,
-
-    ];
+    $status_map = workflow_status_search_map();
 
     // Select required fields
     $this->db->select("CJ.id, CJ.case_reference, CJA.uid_from, CJA.departmentid, CJ.status, 
@@ -893,6 +1058,7 @@ class Assignment_model extends CI_Model
     $this->db->join('claims_task_list as CTL', 'CTL.id = CJ.natureofjob', 'left');
     $this->db->where("CJA.departmentid", $departmentid);
     $this->db->where("CJA.cid_to", $companyid);
+    $this->assigneeVisibilityFromPost($postData);
     // print_r(json_encode($this->db->get()->result_array()));
     // exit;
     // Check if there is a search value
@@ -939,21 +1105,7 @@ class Assignment_model extends CI_Model
 
     // Define column names for searching
     $this->column_search = array('CJ.case_reference', 'CJ.aid', 'CTL.investigator_type');
-
-    // Status mapping for search
-    $status_map = [
-      'Under Survey' => 1,
-      'Photo Uploaded' => 2,
-      'LOR Sent' => 3,
-      'FSR' => 4,
-      'Billing' => 5,
-      'Waiting for TI' => 6,
-      'Pending for Dispatch' => 7,
-      'Dispatched' => 8,
-      'Partially Payment Received' => 9,
-      'Case Completed' => 10,
-      'Cancelled' => 11,
-    ];
+    $status_map = workflow_status_search_map();
 
     // Select required fields
     $this->db->select("CJ.id, CJ.case_reference, CJA.uid_from, CJA.departmentid, CJ.status, 
@@ -1182,22 +1334,7 @@ class Assignment_model extends CI_Model
 
     // Define column names for searching
     $this->column_search = array('CJ.case_reference', 'CJ.aid', 'CTL.investigator_type');
-
-    // Status mapping for search
-    $status_map = [
-      'Under Survey' => 1,
-      'Photo Uploaded' => 2,
-      'LOR Sent' => 3,
-      'FSR' => 4,
-      'Billing' => 5,
-      'Waiting for TI' => 6,
-      'Pending for Dispatch' => 7,
-      'Dispatched' => 8,
-      'Partially Payment Received' => 9,
-      'Case Completed' => 10,
-      'Cancelled' => 11,
-
-    ];
+    $status_map = workflow_status_search_map();
 
     // Select required fields
     $this->db->select("CJ.id, CJ.case_reference, CJA.uid_from, CJA.departmentid, CJ.status, 
@@ -1210,6 +1347,7 @@ class Assignment_model extends CI_Model
     $this->db->where("CJ.status", 10);
     $this->db->where("CJA.departmentid", $departmentid);
     $this->db->where("CJA.cid_to", $companyid);
+    $this->assigneeVisibilityFromPost($postData);
 
     // Check if there is a search value
     if (isset($postData['search']['value']) && !empty($postData['search']['value'])) {

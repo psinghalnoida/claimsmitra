@@ -5094,6 +5094,22 @@ class Cases extends CI_Controller
             $tracking_no = $this->input->post('tracking_no');
             $description = $this->input->post('description');
             $dispatchdate = $this->input->post('dispatchdate');
+            $dispatch_to = $this->input->post('dispatch_to');
+
+            if (empty($dispatch_to)) {
+                $response = array(
+                    'success' => false,
+                    'message' => 'Dispatch to (paying office or other concerned office) is required'
+                );
+                $this->output
+                    ->set_content_type('application/json')
+                    ->set_status_header(400)
+                    ->set_output(json_encode($response));
+                return;
+            }
+
+            $to_label = ($dispatch_to === 'other_office') ? 'Other concerned office' : 'Paying office';
+            $description = '[To: ' . $to_label . '] ' . $description;
 
             // If Dispatch By Post is selected, tracknumber will be required
             if ($dispatchmode == '2' && empty($tracking_no)) {

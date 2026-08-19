@@ -195,6 +195,62 @@ Minimum snapshot:
 
 **Why:** “Cattle spot” is a product; Miscellaneous/Crop is the licence/desk. One string cannot drive templates, SLA, and supervisor books.
 
+### R-29 — REG and STY; both require media
+
+Every assignment is **REG** (regular) or **STY** (stereotype).
+
+- **Both** require photos and videos on the file.
+- **REG:** **ILA and LOR are mandatory.** The handler cannot skip them. This is how regular TAT is kept.
+- **STY:** a **repeat** (same insurer / insured / policy / place). ILA and LOR are **optional or mandatory according to the field template**. The handler may also **mark that after the assignment is received** if the template is silent or this file differs.
+- The **report** is the meeting point. The system must receive it **along with** the media.
+
+**Why:** REG files need a document chase on a clock. STY repeats must not be forced through ILA/LOR when the product does not use them — otherwise TAT is lost on copy-forward work.
+
+### R-34 — Field templates copy repeating survey data
+
+A **field template** is a named snapshot of the survey form: insurer/broker offices, insured, policy, place of survey, nature of job, **Send ILA / Send LOR**, and **submission TAT** (5 / 15 / 30 days).
+
+- Templates belong to the **handler** and a **nature of job**.
+- Applying a template copies those decisions onto the job. After receipt the handler may still change ILA/LOR/TAT for this file.
+- Distinct from **email body templates** (`claims_email`), which do **not** control ILA, LOR, or TAT.
+
+**Why:** The template is the product recipe for that repeat, including whether the chase and how many days to dispatch.
+
+### R-36 — TAT runs from acknowledgement to dispatch
+
+The job clock **starts when the acknowledgement is sent** (W-03a) and **ends at dispatch** (W-10).
+
+| Clock | When it applies | Default TAT |
+|---|---|---|
+| **LOR** | REG always; STY if template/job says send LOR | **24 hours** from acknowledgement |
+| **ILA** | REG always; STY if template/job says send ILA | **3 days** from acknowledgement |
+| **Submission** (report through dispatch) | Every job | **5, 15, or 30 days** from acknowledgement — set on the **template** or **marked after receipt** |
+
+Missing an ack date means the clocks have not started. LOR reminders (R-33) sit inside the 24-hour LOR TAT; they do not replace it.
+
+**Why:** Insurer letters quote these windows. Starting the clock at data entry (before ack) punishes the desk for mail delay; ending at report (before dispatch) pretends the file has left when it has not.
+
+### R-35 — Acknowledge the assignment before field work
+
+After the case is **entered** and a handler owns it, the handler sends an **acknowledgement** to the appointing thread: nature of assignment, mail subject, To/Cc (from the appointment mail), and a prepared email they **check and send**. At this same step they may **select a field template** (R-34).
+
+This is not ILA and not LOR. It only confirms “we have the appointment.”
+
+**Why:** Insurer desks expect a same-day ack on their subject line. Mixing ack with ILA/LOR delays the receipt confirmation.
+
+### R-33 — LOR chase is review-then-send
+
+On **REG**, and on jobs whose **field template says send LOR**, LOR is a living document checklist, not a one-shot letter. If the field template says skip LOR, this stage is not on the path.
+
+- Paste the **appointment mail** (subject + people). The system **parses and stores** addresses and the original subject.
+- Each stored person is marked **To / Cc / Bcc** (or skip this send).
+- Each required document is **received** or **pending**. The letter and mailer include **pending items only**.
+- Outbound subject is the **appointment subject + our ref** (`case_reference`, else `aid`).
+- Choose a **reminder frequency** (days). When due, the job appears on the **dashboard**. The handler reviews inbound mail, ticks received docs, then sends LOR for what is still pending.
+- The system **does not silently auto-email**. Frequency is a dashboard nag, not an unattended mailbox.
+
+**Why:** Auto-chasing without checking receipts nags for papers already in. Insurer desks find the file by the appointment thread subject, not a new Claims Mitra title.
+
 ---
 
 ## F. Billing and money
@@ -238,6 +294,35 @@ Payments (NEFT, TDS, partial/final) hang off the bill as history. Updating a rec
 
 **Why:** Partial pay and TDS are how insurer AR actually closes. Overwrite looks like the case is settled when it is not.
 
+### R-30 — Dispatch after billing must be recorded
+
+After the bill (and TI), the report is **dispatched**. The system must store every dispatch with:
+
+- **Mode:** online portal submission, **email**, **post**, or **physical handover**
+- **To whom:** **paying office** and/or **other concerned office** (appointing/policy/other)
+- Date, and tracking number when posted
+
+One job may have more than one dispatch (e.g. portal to insurer and post to pay office).
+
+**Why:** Delivery is how the debtor can pass the bill. Unrecorded handovers cannot be proved. Post to pay office vs another office is not the same act.
+
+### R-31 — After dispatch, wait for payment advice
+
+Dispatched jobs **await payment advice**. When advice is received:
+
+- If the bill is **not fully paid** (including TDS as agreed) → **pursue the balance** (status partial).
+- If it is **fully paid** (or written off by a later decision) → **archive** the case in the record.
+
+Advice is not the same as the bill (R-27). No advice yet = still waiting, not archived.
+
+**Why:** Accounts work is chase-or-file, not “dispatched = closed.”
+
+### R-32 — Keep file and media at least 3 years
+
+The case file, report, photos, and videos must be **retained for at least three years** after the case is archived (or cancelled). Do not purge earlier for space or “complete” status.
+
+**Why:** Insurer/survey disputes, IRDAI queries, and tax audits outlast the payment cycle.
+
 ---
 
 ## G. Implementation honesty
@@ -255,3 +340,10 @@ Existing tables (`claims_company` + profession flags, departments as a mixed LOB
 | Date | Decision | Effect |
 |---|---|---|
 | 2026-08-18 | Initial rules captured from product-owner working model (vendor CINs, assignment, survey org, billing). | R-01–R-28 adopted. |
+| 2026-08-18 | Job workflow W-01–W-12 adopted; incoming lists follow seats (R-17). | See `docs/WORKFLOW.md`. Vendor code persisted on bill save (R-23). |
+| 2026-08-18 | REG vs STY. Media required on both. ILA/LOR only on REG. Report is the join. | R-29. |
+| 2026-08-18 | STY may still require ILA/LOR per job. Field templates for repeat insurer/insured/policy/place. Ack email after entry; template selectable then. | R-29 amended. R-34, R-35. |
+| 2026-08-18 | ILA/LOR send-or-skip is stored on the field template (not the email template). | R-29, R-34. |
+| 2026-08-18 | REG: ILA+LOR always mandatory. STY: template or post-receipt mark. TAT: LOR 24h, ILA 3d, submission 5/15/30d, ack→dispatch. | R-29, R-36. |
+| 2026-08-18 | Dispatch modes + destination; await payment advice then chase or archive; retain file/media ≥ 3 years. | R-30–R-32. |
+| 2026-08-18 | LOR chase: paste appointment mail, To/Cc/Bcc, mark received, dashboard frequency reminders, subject = appointment + our ref. No silent auto-mail. | R-33. |
