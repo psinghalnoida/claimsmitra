@@ -1,0 +1,22 @@
+{
+  "name": "Claims Mitra",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "."
+  },
+  "user": "ubuntu",
+  "install": "./.cursor/scripts/install.sh",
+  "start": "./.cursor/scripts/start.sh",
+  "terminals": [
+    {
+      "name": "web",
+      "command": "source /workspace/.cursor/db.env 2>/dev/null; CI_ENV=production php -S 0.0.0.0:8080 -t /workspace /workspace/.cursor/scripts/router.php"
+    }
+  ],
+  "ports": [
+    {
+      "port": 8080,
+      "name": "Web App"
+    }
+  ]
+}

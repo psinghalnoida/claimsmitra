@@ -75,10 +75,10 @@ $query_builder = TRUE;
 
 $db['default'] = array(
 	'dsn'	=> '',
-	'hostname' => 'localhost',
-	'username' => 'adwiti_claimsmitra_db',
-	'password' => 'ij9eSb4PFkPunwU',
-	'database' => 'testing_db',
+	'hostname' => getenv('DB_HOSTNAME') ?: '127.0.0.1',
+	'username' => getenv('DB_USERNAME') ?: 'adwiti_claimsmitra_db',
+	'password' => getenv('DB_PASSWORD') ?: '',
+	'database' => getenv('DB_DATABASE') ?: 'adwiti_claimsmitra_db',
 	'dbdriver' => 'mysqli',
 	'dbprefix' => '',
 	'pconnect' => FALSE,
