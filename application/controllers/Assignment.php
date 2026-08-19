@@ -2943,48 +2943,45 @@ class Assignment extends CI_Controller
             $sender_name = "VP Singhal & Co.";
             $formattedEmailBody = nl2br($emailBody);
 
-            $to = [];
-            $cc = [];
-            $bcc = [];
+            // Send one message per recipient entry rather than batching every address into a
+            // single To/Cc header set — recipients here can belong to different organizations
+            // (e.g. an insurer contact and a broker contact), and a shared header would expose
+            // each recipient's email address to every other recipient.
+            $sentAny = false;
+            $seenTo = [];
             foreach ($recipients as $recipient) {
-                if (!empty($recipient['to'])) {
-                    $to[] = $recipient['to'];
+                $to = !empty($recipient['to']) ? $recipient['to'] : null;
+                if (!$to && !empty($recipient['cc'])) {
+                    $to = $recipient['cc'];
                 }
-                if (!empty($recipient['cc'])) {
-                    $cc[] = $recipient['cc'];
+                if (!$to || isset($seenTo[$to])) {
+                    continue;
+                }
+                $seenTo[$to] = true;
+
+                $this->email->clear(true);
+                $this->email->from($config['username'], $sender_name);
+                $this->email->to($to);
+                if (!empty($recipient['cc']) && $recipient['cc'] !== $to) {
+                    $this->email->cc($recipient['cc']);
                 }
                 if (!empty($recipient['bcc'])) {
-                    $bcc[] = $recipient['bcc'];
+                    $this->email->bcc($recipient['bcc']);
+                }
+                $this->email->subject($subject);
+                $this->email->message($formattedEmailBody);
+                if ($attachmentPath && file_exists($attachmentPath)) {
+                    $this->email->attach($attachmentPath);
+                }
+                if ($this->email->send()) {
+                    $sentAny = true;
+                } else {
+                    log_message('error', 'LOR sendmail failed for ' . $to . ': ' . $this->email->print_debugger(['headers']));
                 }
             }
-            $to = array_values(array_unique($to));
-            $cc = array_values(array_unique($cc));
-            $bcc = array_values(array_unique($bcc));
-            if (empty($to) && !empty($cc)) {
-                $to = $cc;
-                $cc = [];
-            }
-            if (empty($to)) {
-                log_message('error', 'LOR sendmail: no To address');
-                return;
-            }
 
-            $this->email->clear(true);
-            $this->email->from($config['username'], $sender_name);
-            $this->email->to($to);
-            if (!empty($cc)) {
-                $this->email->cc($cc);
-            }
-            if (!empty($bcc)) {
-                $this->email->bcc($bcc);
-            }
-            $this->email->subject($subject);
-            $this->email->message($formattedEmailBody);
-            if ($attachmentPath && file_exists($attachmentPath)) {
-                $this->email->attach($attachmentPath);
-            }
-            if (!$this->email->send()) {
-                log_message('error', 'LOR sendmail failed: ' . $this->email->print_debugger(['headers']));
+            if (!$sentAny) {
+                log_message('error', 'LOR sendmail: no To address');
             }
         } else {
             log_message('error', 'Email configuration or recipient data is missing.');

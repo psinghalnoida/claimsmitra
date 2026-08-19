@@ -41,13 +41,17 @@ if (!function_exists('workflow_status_badge_html')) {
 /**
  * Restrict a job list to the current seat (docs/WORKFLOW.md, R-17).
  *
- * @param string $assignAlias alias of claims_livelocationjob_assign (e.g. CJA, clja)
- * @param string $jobAlias    alias of claims_livelocationjob (e.g. CJ, clj); used for accounts
- * @param mixed  $userRole    connect usertype 1–4
- * @param int    $userId      session user id
+ * @param string   $assignAlias    alias of claims_livelocationjob_assign (e.g. CJA, clja)
+ * @param string   $jobAlias       alias of claims_livelocationjob (e.g. CJ, clj); used for accounts
+ * @param mixed    $userRole       connect usertype 1–4
+ * @param int      $userId         session user id
+ * @param int|null $explicitStatus a specific clj.status the caller already filters to (if any).
+ *                                 When set and outside the accounts scope, the accounts-only
+ *                                 status restriction is skipped instead of being AND-ed on top
+ *                                 of the caller's filter (which would always yield zero rows).
  */
 if (!function_exists('workflow_apply_assignee_visibility')) {
-    function workflow_apply_assignee_visibility($assignAlias, $jobAlias, $userRole, $userId)
+    function workflow_apply_assignee_visibility($assignAlias, $jobAlias, $userRole, $userId, $explicitStatus = null)
     {
         $CI =& get_instance();
         $role = (string) $userRole;
@@ -62,6 +66,12 @@ if (!function_exists('workflow_apply_assignee_visibility')) {
             $accountsStatuses = $CI->config->item('workflow_accounts_statuses');
             if (!is_array($accountsStatuses) || empty($accountsStatuses)) {
                 $accountsStatuses = array(5, 6, 7, 8, 9, 10);
+            }
+            if ($explicitStatus !== null && !in_array((int) $explicitStatus, $accountsStatuses, true)) {
+                // Caller already scopes to a status outside the accounts range (e.g. "under
+                // survey" = 1) — applying the accounts filter on top would always match zero
+                // rows, so leave the caller's own status filter as the only restriction.
+                return;
             }
             $CI->db->where_in($jobAlias . '.status', $accountsStatuses);
         }

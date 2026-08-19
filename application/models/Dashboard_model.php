@@ -147,7 +147,7 @@ public function getTotalUnderSurveyCases($companyid, $departmentid, $userRole = 
   $this->db->where('clja.cid_to', $companyid);
   $this->db->where('clja.departmentid', $departmentid);
   $this->db->where('clj.status', 1);
-  workflow_apply_assignee_visibility('clja', 'clj', $userRole, (int) $this->session->userdata('id'));
+  workflow_apply_assignee_visibility('clja', 'clj', $userRole, (int) $this->session->userdata('id'), 1);
   return $this->db->count_all_results();
 }
 
@@ -159,7 +159,7 @@ public function getTotalBillingDone($companyid, $departmentid, $userRole = null)
   $this->db->where('clja.cid_to', $companyid);
   $this->db->where('clja.departmentid', $departmentid);
   $this->db->where('clj.status', 5);
-  workflow_apply_assignee_visibility('clja', 'clj', $userRole, (int) $this->session->userdata('id'));
+  workflow_apply_assignee_visibility('clja', 'clj', $userRole, (int) $this->session->userdata('id'), 5);
   return $this->db->count_all_results();
 }
 
@@ -171,7 +171,7 @@ public function getTotalDispatchCases($companyid, $departmentid, $userRole = nul
   $this->db->where('clja.cid_to', $companyid);
   $this->db->where('clja.departmentid', $departmentid);
   $this->db->where('clj.status', 8);
-  workflow_apply_assignee_visibility('clja', 'clj', $userRole, (int) $this->session->userdata('id'));
+  workflow_apply_assignee_visibility('clja', 'clj', $userRole, (int) $this->session->userdata('id'), 8);
   return $this->db->count_all_results();
 }
 // NonLocation Incoming Cases
